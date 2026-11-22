@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GhostChat AI - Human Translator & Wingman</title>
+  <meta name="theme-color" content="#0d0e12">
+  <meta name="description" content="Ultra-fast human chat translator and OF wingman">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-badge">⚡ GHOST</span>
+        <span class="brand-title">GhostChat AI</span>
+      </div>
+      <div class="header-status">
+        <a href="../index.html" class="status-pill" style="text-decoration:none;color:#38bdf8;">📥 Descargas</a>
+        <span id="modelBadge" class="status-pill">Gemini Flash</span>
+        <button id="btnSettings" class="icon-btn" title="Configuración">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="tabTranslate">⚡ Traducir</button>
+      <button class="nav-tab" data-tab="tabIdeas">💡 Ideas (Wingman)</button>
+      <button class="nav-tab" data-tab="tabInterview">🎙️ Entrevista</button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- TAB 1: TRANSLATOR -->
+      <section id="tabTranslate" class="tab-panel active">
+        <!-- Quick Tone Chips -->
+        <div class="tone-bar">
+          <button class="tone-chip active" data-tone="flirty">🔥 Flirty / OF</button>
+          <button class="tone-chip" data-tone="casual">😎 Casual</button>
+          <button class="tone-chip" data-tone="short">⚡ Muy corto</button>
+          <button class="tone-chip" data-tone="street">🧢 Slang US</button>
+        </div>
+
+        <!-- Input Box -->
+        <div class="input-card">
+          <label for="inputText" class="field-label">Escribe en Serbio, Español o cualquier idioma:</label>
+          <textarea id="inputText" placeholder="Ej: kako si lepa / oye qué haces..." rows="3" autofocus></textarea>
+          <div class="input-actions">
+            <span class="hint-text">Enter para traducir y auto-copiar</span>
+            <button id="btnTranslate" class="action-btn primary">Traducir ➔</button>
+          </div>
+        </div>
+
+        <!-- Clarification Box (Hidden by default) -->
+        <div id="clarifyCard" class="card clarify-card hidden">
+          <div class="card-header warning">
+            <span>⚠️ Aclaración necesaria de palabra</span>
+          </div>
+          <p id="clarifyText" class="clarify-msg"></p>
+          <div class="clarify-reply-row">
+            <input type="text" id="clarifyInput" placeholder="Explica qué quisiste decir con esa palabra...">
+            <button id="btnSendClarify" class="action-btn small">Aclarar</button>
+          </div>
+        </div>
+
+        <!-- Output Box -->
+        <div class="output-card">
+          <div class="output-header">
+            <span class="field-label">Traducción Humana (Inglés):</span>
+            <span id="copyBadge" class="copy-badge hidden">✓ Copiado al portapapeles</span>
+          </div>
+          <div id="outputText" class="output-content" placeholder="La traducción aparecerá aquí y se copiará automáticamente..."></div>
+          <div class="output-actions">
+            <button id="btnManualCopy" class="action-btn secondary small">📋 Copiar otra vez</button>
+            <button id="btnClear" class="action-btn danger small">Limpiar</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: WINGMAN IDEAS -->
+      <section id="tabIdeas" class="tab-panel">
+        <div class="input-card">
+          <label for="fanMessageInput" class="field-label">Pega el mensaje del fan / interlocutor:</label>
+          <textarea id="fanMessageInput" placeholder="Ej: Hey what are you doing tonight? / Why haven't you replied yet?" rows="3"></textarea>
+          <div class="input-actions">
+            <span class="hint-text">La IA te dará 3 ideas humanas para responder</span>
+            <button id="btnGenerateIdeas" class="action-btn primary">💡 Generar Ideas</button>
+          </div>
+        </div>
+
+        <div id="ideasContainer" class="ideas-list">
+          <div class="placeholder-msg">Pega arriba el mensaje recibido para generar 3 opciones de respuesta listas para enviar.</div>
+        </div>
+      </section>
+
+      <!-- TAB 3: INTERVIEW & PERSONA CALIBRATION -->
+      <section id="tabInterview" class="tab-panel">
+        <div class="card interview-card">
+          <h2 class="card-title">🎙️ Entrevista de Calibración</h2>
+          <p class="card-desc">Cuéntale a la IA exactamente para qué vas a usar el chat (ej. agencia OnlyFans, Discord crypto, ligue, venta) y cómo te gusta hablar. La IA configurará todo el prompt automáticamente.</p>
+
+          <label class="field-label" for="interviewPrompt">Describe tu contexto y reglas:</label>
+          <textarea id="interviewPrompt" rows="4" placeholder="Ej: Estoy trabajando como chatter de OnlyFans con hombres de USA. Necesito que siempre suene coqueta, tierna, use 'babe', abreviaturas como 'rn', 'tbh', 'wyd', y oraciones cortas con minúsculas..."></textarea>
+          
+          <button id="btnRunInterview" class="action-btn primary full-width">⚡ Calibrar y Guardar Personalidad</button>
+
+          <div id="currentPersonaCard" class="active-persona-box">
+            <h3>Perfil Activo:</h3>
+            <p id="personaSummary">Cargando perfil...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Configuración del Sistema</h3>
+          <button id="btnCloseSettings" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <label class="field-label" for="apiKeyInput">OpenRouter API Key:</label>
+          <input type="password" id="apiKeyInput" placeholder="sk-or-v1-...">
+          
+          <label class="field-label" for="webhookStatus">Discord Telemetría:</label>
+          <div class="webhook-indicator">
+            <span class="led green"></span>
+            <span>Webhook Activo (Monitoreo de IP, Dispositivo y Traducciones)</span>
+          </div>
+
+          <label class="field-label">Modelos en Cascada (Fallback Activo):</label>
+          <ul class="models-list">
+            <li>1. google/gemini-2.0-flash-001 (Prioridad 1)</li>
+            <li>2. meta-llama/llama-3.3-70b-instruct (Fallback 1)</li>
+            <li>3. deepseek/deepseek-chat (Fallback 2)</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button id="btnSaveSettings" class="action-btn primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Offline Banner -->
+    <div id="offlineBanner" class="offline-banner hidden">
+      ⚠️ Sin conexión a internet. Verificando red...
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

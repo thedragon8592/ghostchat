@@ -1,0 +1,21 @@
+{
+  "name": "GhostChat AI Translator",
+  "short_name": "GhostChat",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0c0d12",
+  "theme_color": "#00ff88",
+  "description": "Ultra-fast human chat translator and OF wingman with auto-copy",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
