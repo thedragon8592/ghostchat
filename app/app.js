@@ -1,4 +1,4 @@
-import { GHOST_CONFIG, translateChat, generateChatIdeas, processInterview } from './core.js';
+import { GHOST_CONFIG, translateChat, generateChatIdeas, processInterview, getActiveKey } from './core.js';
 
 // DOM Elements
 const tabBtns = document.querySelectorAll('.nav-tab');
@@ -53,8 +53,7 @@ function initApp() {
   updatePersonaDisplay();
 
   // Load API Key
-  const storedKey = localStorage.getItem('ghost_api_key');
-  apiKeyInput.value = storedKey || GHOST_CONFIG.defaultApiKey;
+  apiKeyInput.value = getActiveKey();
 
   // Setup Service Worker for PWA
   if ('serviceWorker' in navigator) {
@@ -110,7 +109,7 @@ function bindEvents() {
     const text = outputText.textContent.trim();
     if (text) {
       navigator.clipboard.writeText(text);
-      showCopyBadge('✓ Copiado al portapapeles');
+      showCopyBadge('✓ Copied to clipboard');
     }
   });
 
@@ -128,7 +127,7 @@ function bindEvents() {
     const orig = inputText.value.trim();
     const explanation = clarifyInput.value.trim();
     if (explanation) {
-      inputText.value = `${orig} (significa: ${explanation})`;
+      inputText.value = `${orig} (means: ${explanation})`;
       clarifyCard.classList.add('hidden');
       handleTranslate();
     }
@@ -141,7 +140,10 @@ function bindEvents() {
   btnRunInterview.addEventListener('click', handleInterview);
 
   // Settings Modal
-  btnSettings.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+  btnSettings.addEventListener('click', () => {
+    apiKeyInput.value = getActiveKey();
+    settingsModal.classList.remove('hidden');
+  });
   btnCloseSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
   btnSaveSettings.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
@@ -157,8 +159,8 @@ async function handleTranslate() {
   if (!text) return;
 
   btnTranslate.disabled = true;
-  btnTranslate.textContent = 'Traduciendo...';
-  outputText.textContent = 'Traduciendo al instante...';
+  btnTranslate.textContent = 'Translating...';
+  outputText.textContent = 'Translating instantly...';
   clarifyCard.classList.add('hidden');
   copyBadge.classList.add('hidden');
 
@@ -174,13 +176,13 @@ async function handleTranslate() {
 
   const result = await translateChat({
     text,
-    apiKey: apiKeyInput.value.trim(),
+    apiKey: apiKeyInput.value.trim() || getActiveKey(),
     persona: activePersona,
-    platform: 'Web PWA'
+    platform: 'Web App'
   });
 
   btnTranslate.disabled = false;
-  btnTranslate.textContent = 'Traducir ➔';
+  btnTranslate.textContent = 'Translate ➔';
 
   if (!result.success) {
     outputText.textContent = `Error: ${result.error}`;
@@ -190,14 +192,14 @@ async function handleTranslate() {
   if (result.isClarification) {
     clarifyCard.classList.remove('hidden');
     clarifyText.textContent = result.text;
-    outputText.textContent = '(Esperando aclaración para traducir correctamente...)';
+    outputText.textContent = '(Waiting for clarification to translate accurately...)';
     clarifyInput.focus();
     return;
   }
 
   outputText.textContent = result.text;
   modelBadge.textContent = result.modelUsed.split('/')[1] || 'AI Ready';
-  showCopyBadge('✓ Copiado automáticamente');
+  showCopyBadge('✓ Auto-copied to clipboard');
 }
 
 async function handleGenerateIdeas() {
@@ -205,21 +207,21 @@ async function handleGenerateIdeas() {
   if (!msg) return;
 
   btnGenerateIdeas.disabled = true;
-  btnGenerateIdeas.textContent = 'Generando...';
-  ideasContainer.innerHTML = '<div class="placeholder-msg">Generando 3 opciones humanas...</div>';
+  btnGenerateIdeas.textContent = 'Generating...';
+  ideasContainer.innerHTML = '<div class="placeholder-msg">Generating 3 human options...</div>';
 
   const res = await generateChatIdeas({
     subscriberMessage: msg,
-    apiKey: apiKeyInput.value.trim(),
+    apiKey: apiKeyInput.value.trim() || getActiveKey(),
     persona: currentPersona,
-    platform: 'Web PWA'
+    platform: 'Web App'
   });
 
   btnGenerateIdeas.disabled = false;
-  btnGenerateIdeas.textContent = '💡 Generar Ideas';
+  btnGenerateIdeas.textContent = '💡 Generate Ideas';
 
   if (!res.success || !res.ideas) {
-    ideasContainer.innerHTML = `<div class="placeholder-msg" style="color:#ef4444">${res.error || 'Error al generar ideas'}</div>`;
+    ideasContainer.innerHTML = `<div class="placeholder-msg" style="color:#ef4444">${res.error || 'Failed to generate ideas'}</div>`;
     return;
   }
 
@@ -229,8 +231,8 @@ async function handleGenerateIdeas() {
     card.className = 'idea-card';
     card.innerHTML = `
       <div class="idea-card-header">
-        <span class="idea-tag">${escapeHtml(idea.tag || 'Opción')}</span>
-        <button class="action-btn small primary">📋 Copiar y enviar</button>
+        <span class="idea-tag">${escapeHtml(idea.tag || 'Option')}</span>
+        <button class="action-btn small primary">📋 Copy & Send</button>
       </div>
       <div class="idea-text">${escapeHtml(idea.text)}</div>
     `;
@@ -238,8 +240,8 @@ async function handleGenerateIdeas() {
     const copyBtn = card.querySelector('button');
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(idea.text);
-      copyBtn.textContent = '✓ Copiado';
-      setTimeout(() => copyBtn.textContent = '📋 Copiar y enviar', 1500);
+      copyBtn.textContent = '✓ Copied';
+      setTimeout(() => copyBtn.textContent = '📋 Copy & Send', 1500);
     });
 
     ideasContainer.appendChild(card);
@@ -249,26 +251,26 @@ async function handleGenerateIdeas() {
 async function handleInterview() {
   const text = interviewPrompt.value.trim();
   if (!text) {
-    alert('Por favor escribe tu contexto o trabajo.');
+    alert('Please describe your context or job.');
     return;
   }
 
   btnRunInterview.disabled = true;
-  btnRunInterview.textContent = 'Procesando entrevista...';
+  btnRunInterview.textContent = 'Processing interview...';
 
   const res = await processInterview({
     interviewText: text,
-    apiKey: apiKeyInput.value.trim()
+    apiKey: apiKeyInput.value.trim() || getActiveKey()
   });
 
   btnRunInterview.disabled = false;
-  btnRunInterview.textContent = '⚡ Calibrar y Guardar Personalidad';
+  btnRunInterview.textContent = '⚡ Calibrate & Save Personality';
 
   if (res.success && res.persona) {
     currentPersona = res.persona;
     localStorage.setItem('ghost_persona', JSON.stringify(currentPersona));
     updatePersonaDisplay();
-    alert('¡Personalidad calibrada y guardada con éxito! Ahora el traductor responderá exactamente con tu estilo.');
+    alert('Personality calibrated and saved successfully! The translator will now adapt strictly to your style.');
   }
 }
 
