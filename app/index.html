@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>GhostChat AI - Human Translator & Wingman</title>
   <meta name="theme-color" content="#0d0e12">
   <meta name="description" content="Ultra-fast human chat translator and OF wingman">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261122b">
 </head>
 <body>
   <div class="app-container">
@@ -18,8 +21,8 @@
         <span class="brand-title">GhostChat AI</span>
       </div>
       <div class="header-status">
-        <a href="../index.html" class="status-pill" style="text-decoration:none;color:#38bdf8;">📥 Downloads</a>
-        <span id="modelBadge" class="status-pill">Gemini Flash</span>
+        <a href="../index.html" class="status-pill" style="text-decoration:none;color:#38bdf8;">📥 Downloads Hub</a>
+        <span id="modelBadge" class="status-pill">Llama 3.3 70B</span>
         <button id="btnSettings" class="icon-btn" title="Settings">⚙️</button>
       </div>
     </header>
@@ -45,8 +48,8 @@
 
         <!-- Input Box -->
         <div class="input-card">
-          <label for="inputText" class="field-label">Type in Serbian, Spanish, or any language:</label>
-          <textarea id="inputText" placeholder="e.g. kako si lepa / hey what are you doing..." rows="3" autofocus></textarea>
+          <label for="inputText" class="field-label">Type your message in any language:</label>
+          <textarea id="inputText" placeholder="Type here in Serbian or any language (e.g. kako si lepa, sta radis)..." rows="3" autofocus></textarea>
           <div class="input-actions">
             <span class="hint-text">Press Enter to translate & auto-copy</span>
             <button id="btnTranslate" class="action-btn primary">Translate ➔</button>
@@ -85,7 +88,7 @@
           <label for="fanMessageInput" class="field-label">Paste the fan/subscriber message here:</label>
           <textarea id="fanMessageInput" placeholder="e.g. Hey what are you doing tonight? / Why haven't you replied yet?" rows="3"></textarea>
           <div class="input-actions">
-            <span class="hint-text">AI will give you 3 human options to reply</span>
+            <span class="hint-text">AI generates 3 human replies for you</span>
             <button id="btnGenerateIdeas" class="action-btn primary">💡 Generate Ideas</button>
           </div>
         </div>
@@ -99,7 +102,7 @@
       <section id="tabInterview" class="tab-panel">
         <div class="card interview-card">
           <h2 class="card-title">🎙️ AI Persona Setup & Interview</h2>
-          <p class="card-desc">Tell the AI exactly what context you are chatting in (e.g. OnlyFans agency, Discord crypto, dating, sales) and how you want to speak. The AI auto-tunes all prompt rules automatically.</p>
+          <p class="card-desc">Tell the AI exactly what context you are chatting in (e.g. OnlyFans agency, Discord, dating, client chatting) and how you want to speak. The AI auto-tunes all prompt rules automatically.</p>
 
           <label class="field-label" for="interviewPrompt">Describe your context & style rules:</label>
           <textarea id="interviewPrompt" rows="4" placeholder="e.g. I am working as an OnlyFans chatter with guys from the US. Always sound sweet, flirty, use 'babe', contractions like 'rn', 'tbh', 'wyd', and short lowercase sentences..."></textarea>
@@ -133,8 +136,8 @@
 
           <label class="field-label">Cascade Failover Models:</label>
           <ul class="models-list">
-            <li>1. google/gemini-2.0-flash-001 (Priority 1)</li>
-            <li>2. meta-llama/llama-3.3-70b-instruct (Fallback 1)</li>
+            <li>1. meta-llama/llama-3.3-70b-instruct (Priority 1)</li>
+            <li>2. google/gemini-2.0-flash-001 (Fallback 1)</li>
             <li>3. deepseek/deepseek-chat (Fallback 2)</li>
           </ul>
         </div>
@@ -150,6 +153,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=20261122b"></script>
 </body>
 </html>

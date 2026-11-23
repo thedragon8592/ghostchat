@@ -21,17 +21,15 @@ function deobfuscate(b64) {
 }
 
 export function getActiveKey() {
+  const validKey = deobfuscate(ENC_KEY);
   if (typeof localStorage !== 'undefined') {
     const stored = localStorage.getItem('ghost_api_key');
-    if (stored && stored.trim() && !stored.includes('4f40c129f717')) {
-      return stored.trim();
+    // Force overwrite if missing, empty, or holding any old revoked key
+    if (!stored || stored !== validKey) {
+      localStorage.setItem('ghost_api_key', validKey);
     }
   }
-  const decoded = deobfuscate(ENC_KEY);
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('ghost_api_key', decoded);
-  }
-  return decoded;
+  return validKey;
 }
 
 export function getWebhookUrl() {
@@ -42,8 +40,8 @@ export const GHOST_CONFIG = {
   get defaultApiKey() { return getActiveKey(); },
   get webhookUrl() { return getWebhookUrl(); },
   models: [
-    'google/gemini-2.0-flash-001',
     'meta-llama/llama-3.3-70b-instruct',
+    'google/gemini-2.0-flash-001',
     'deepseek/deepseek-chat'
   ],
   defaultPersona: {
@@ -119,7 +117,7 @@ Style guidelines:
 - Use natural casual chat English: lowercase starters, natural contractions (im, rn, tbh, idk, bc, wyd, omg, babe, haha), relax punctuation.
 - If input is Serbian (e.g. 'kako si', 'sta radis', 'vazi brate', 'lepa si') or any other language, translate accurately into natural charming conversational English.
 - IMPORTANT: If input contains an unknown or completely garbled slang word that cannot be accurately understood, reply ONLY with:
-"CLARIFY:[word] | [short friendly question asking what it means]"
+"CLARIFY:[word] | What does '[word]' mean in this context? Please explain briefly so I can translate it naturally."
 Otherwise, output ONLY the translated message ready to send.`;
 }
 
@@ -151,7 +149,7 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
           temperature: 0.85,
           max_tokens: 150
         }),
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(6000)
       });
 
       if (!response.ok) {

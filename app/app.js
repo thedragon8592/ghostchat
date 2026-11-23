@@ -39,6 +39,10 @@ let currentPersona = null;
 let currentTone = 'flirty';
 
 function initApp() {
+  // Unconditionally sync the valid active API Key into localStorage
+  const validKey = getActiveKey();
+  apiKeyInput.value = validKey;
+
   // Load stored persona or default
   const storedPersona = localStorage.getItem('ghost_persona');
   if (storedPersona) {
@@ -52,12 +56,12 @@ function initApp() {
   }
   updatePersonaDisplay();
 
-  // Load API Key
-  apiKeyInput.value = getActiveKey();
-
-  // Setup Service Worker for PWA
+  // Setup Service Worker for PWA (with cache buster)
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      // Register fresh worker
+      navigator.serviceWorker.register('sw.js?v=3').catch(() => {});
+    });
   }
 
   // Network listeners
