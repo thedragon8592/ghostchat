@@ -1,4 +1,4 @@
-import { GHOST_CONFIG, translateChat, generateChatIdeas, processInterview, getActiveKey } from './core.js';
+import { GHOST_CONFIG, translateChat, generateChatIdeas, processAdaptiveInterview, getActiveKey } from './core.js';
 
 // DOM Elements
 const tabBtns = document.querySelectorAll('.nav-tab');
@@ -17,7 +17,7 @@ const clarifyCard = document.getElementById('clarifyCard');
 const clarifyText = document.getElementById('clarifyText');
 const clarifyInput = document.getElementById('clarifyInput');
 const btnSendClarify = document.getElementById('btnSendClarify');
-const toneChips = document.querySelectorAll('.tone-chip');
+const toneChips = document.querySelectorAll('.tone-chip:not(.wizard-chip):not(.append-chip)');
 const modelBadge = document.getElementById('modelBadge');
 
 // Status Notice Banner Elements
@@ -33,10 +33,19 @@ const btnIdeasSpinner = document.getElementById('btnIdeasSpinner');
 const btnIdeasText = document.getElementById('btnIdeasText');
 const ideasContainer = document.getElementById('ideasContainer');
 
-// Interview Tab Elements
-const interviewPrompt = document.getElementById('interviewPrompt');
-const btnRunInterview = document.getElementById('btnRunInterview');
-const personaSummary = document.getElementById('personaSummary');
+// Adaptive Interview Elements
+const qRole = document.getElementById('qRole');
+const qAudience = document.getElementById('qAudience');
+const qSlangs = document.getElementById('qSlangs');
+const qBanned = document.getElementById('qBanned');
+const qHooks = document.getElementById('qHooks');
+const btnRunAdaptiveInterview = document.getElementById('btnRunAdaptiveInterview');
+const btnResetDefaultDna = document.getElementById('btnResetDefaultDna');
+const btnToggleEditInterview = document.getElementById('btnToggleEditInterview');
+const dnaSummary = document.getElementById('dnaSummary');
+const dnaRole = document.getElementById('dnaRole');
+const dnaSlangs = document.getElementById('dnaSlangs');
+const interviewFormCard = document.getElementById('interviewFormCard');
 
 // Interview Onboarding Modal Elements
 const interviewPromptModal = document.getElementById('interviewPromptModal');
@@ -120,10 +129,11 @@ function initApp() {
     currentPersona = GHOST_CONFIG.defaultPersona;
   }
   updatePersonaDisplay();
+  populateInterviewForm();
 
-  // Setup Service Worker for PWA (with cache buster)
+  // Setup Service Worker for PWA
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=4').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=5').catch(() => {});
   }
 
   // Check first-time interview prompt
@@ -154,9 +164,19 @@ function checkInterviewPrompt() {
 }
 
 function updatePersonaDisplay() {
-  if (currentPersona && personaSummary) {
-    personaSummary.textContent = `${currentPersona.role || 'OF Chatter'}: ${currentPersona.summary || currentPersona.context}`;
-  }
+  if (!currentPersona) return;
+  if (dnaSummary) dnaSummary.textContent = currentPersona.summary || currentPersona.context;
+  if (dnaRole) dnaRole.textContent = currentPersona.role || 'OnlyFans Chatter';
+  if (dnaSlangs) dnaSlangs.textContent = currentPersona.favoriteSlangs || 'babe, rn, tbh, wyd, omg';
+}
+
+function populateInterviewForm() {
+  if (!currentPersona) return;
+  if (qRole) qRole.value = currentPersona.role || '';
+  if (qAudience) qAudience.value = currentPersona.context || '';
+  if (qSlangs) qSlangs.value = currentPersona.favoriteSlangs || '';
+  if (qBanned) qBanned.value = currentPersona.forbiddenWords || '';
+  if (qHooks) qHooks.value = currentPersona.chatStrategy || '';
 }
 
 function bindEvents() {
@@ -178,6 +198,33 @@ function bindEvents() {
       chip.classList.add('active');
       currentTone = chip.dataset.tone;
       showToast(`Tone changed to: ${chip.textContent}`, 'info', 1500);
+    });
+  });
+
+  // Wizard Chip Selection (Replace Value)
+  document.querySelectorAll('.wizard-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const targetId = chip.dataset.target;
+      const targetInput = document.getElementById(targetId);
+      if (targetInput) {
+        targetInput.value = chip.dataset.val;
+        showToast(`Set: ${chip.textContent}`, 'info', 1200);
+      }
+    });
+  });
+
+  // Append Chip Selection (Append Tag)
+  document.querySelectorAll('.append-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const targetId = chip.dataset.target;
+      const targetInput = document.getElementById(targetId);
+      if (targetInput) {
+        const val = chip.dataset.val;
+        if (!targetInput.value.includes(val)) {
+          targetInput.value = targetInput.value ? `${targetInput.value.trim()}, ${val}` : val;
+          showToast(`Added: ${chip.textContent}`, 'info', 1200);
+        }
+      }
     });
   });
 
@@ -235,22 +282,39 @@ function bindEvents() {
   // Wingman Ideas
   btnGenerateIdeas.addEventListener('click', handleGenerateIdeas);
 
-  // Interview Calibrate
-  btnRunInterview.addEventListener('click', handleInterview);
+  // Run Adaptive Deep Interview
+  btnRunAdaptiveInterview?.addEventListener('click', handleAdaptiveInterview);
+
+  // Reset Persona to Default
+  btnResetDefaultDna?.addEventListener('click', () => {
+    if (confirm('Reset to standard OnlyFans VIP Chatter voice?')) {
+      currentPersona = GHOST_CONFIG.defaultPersona;
+      localStorage.setItem('ghost_persona', JSON.stringify(currentPersona));
+      updatePersonaDisplay();
+      populateInterviewForm();
+      showToast('✓ Reset to Default Persona DNA', 'info', 2000);
+    }
+  });
+
+  // Edit Persona Button
+  btnToggleEditInterview?.addEventListener('click', () => {
+    populateInterviewForm();
+    qRole?.focus();
+    showToast('Editing active persona DNA below', 'info', 1500);
+  });
 
   // Interview Modal Actions
   btnStartInterviewModal?.addEventListener('click', () => {
     interviewPromptModal?.classList.add('hidden');
-    // Switch to tab 3
     const interviewTabBtn = document.querySelector('[data-tab="tabInterview"]');
     interviewTabBtn?.click();
-    interviewPrompt?.focus();
+    qRole?.focus();
   });
 
   btnSkipInterviewModal?.addEventListener('click', () => {
     interviewPromptModal?.classList.add('hidden');
     localStorage.setItem('ghost_interview_skipped', 'true');
-    showToast('Using default flirty/casual voice. You can calibrate anytime under "Interview" tab.', 'info', 3000);
+    showToast('Using default flirty voice. You can calibrate anytime under "Interview" tab.', 'info', 3000);
   });
 
   btnCloseInterviewPrompt?.addEventListener('click', () => {
@@ -298,11 +362,11 @@ async function handleTranslate() {
   // Inject active tone into persona context
   const activePersona = { ...currentPersona };
   if (currentTone === 'flirty') {
-    activePersona.context += ' Tone must be seductive, playful, teasing, charming babe vibe.';
+    activePersona.toneDynamic += ' Seductive, sweet, playful, cute babe vibe.';
   } else if (currentTone === 'short') {
-    activePersona.context += ' Keep responses ultra-brief, 2 to 5 words max.';
+    activePersona.formattingRules += ' Keep responses ultra-brief, 2 to 5 words max.';
   } else if (currentTone === 'street') {
-    activePersona.context += ' Use heavy US street chat slang (ngl, no cap, bruh, fr, rn).';
+    activePersona.favoriteSlangs += ', ngl, no cap, bruh, fr, rn';
   }
 
   const result = await translateChat({
@@ -409,33 +473,35 @@ async function handleGenerateIdeas() {
   showToast('✓ 3 Ideas generated successfully!', 'success', 2500);
 }
 
-async function handleInterview() {
-  const text = interviewPrompt.value.trim();
-  if (!text) {
-    showToast('Please describe your context or job', 'warning', 2000);
-    return;
-  }
+async function handleAdaptiveInterview() {
+  const interviewData = {
+    roleAndPlatform: qRole?.value.trim() || 'OnlyFans Chatter',
+    audienceDynamic: qAudience?.value.trim() || 'Men aged 25-45 looking for sweet teasing and engagement',
+    slangsAndKeywords: qSlangs?.value.trim() || 'babe, honey, rn, tbh, wyd, omg, haha',
+    antiAiRules: qBanned?.value.trim() || 'Never sound like an AI, drop trailing periods, all lowercase',
+    conversationHooks: qHooks?.value.trim() || 'Always ask a follow-up question to keep them talking'
+  };
 
-  btnRunInterview.disabled = true;
-  btnRunInterview.textContent = 'Processing interview...';
-  showToast('AI is tuning your personality profile...', 'info', 2500);
+  btnRunAdaptiveInterview.disabled = true;
+  btnRunAdaptiveInterview.textContent = 'Synthesizing Persona DNA...';
+  showToast('AI is synthesizing your custom Persona DNA...', 'info', 3000);
 
-  const res = await processInterview({
-    interviewText: text,
+  const res = await processAdaptiveInterview({
+    interviewData,
     apiKey: apiKeyInput.value.trim() || getActiveKey()
   });
 
-  btnRunInterview.disabled = false;
-  btnRunInterview.textContent = '⚡ Calibrate & Save Personality';
+  btnRunAdaptiveInterview.disabled = false;
+  btnRunAdaptiveInterview.textContent = '⚡ Calibrate & Save Persona DNA';
 
   if (res.success && res.persona) {
     currentPersona = res.persona;
     localStorage.setItem('ghost_persona', JSON.stringify(currentPersona));
     localStorage.setItem('ghost_interview_completed', 'true');
     updatePersonaDisplay();
-    showToast('✓ Personality calibrated & saved successfully!', 'success', 3500);
+    showToast('✓ Persona DNA calibrated & saved permanently!', 'success', 4000);
   } else {
-    showToast('Could not save personality. Please try again.', 'error', 3000);
+    showToast('Could not calibrate. Using defaults.', 'warning', 3000);
   }
 }
 

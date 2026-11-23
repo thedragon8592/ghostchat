@@ -1,5 +1,5 @@
 /**
- * GhostChat AI - Core Engine (English / Zero-Exposure Obfuscation)
+ * GhostChat AI - Core Engine (Adaptive Deep Persona & Zero-Exposure Obfuscation)
  * Ultra-fast human chat translator and OF wingman with auto-copy and localStorage persistence.
  */
 
@@ -24,7 +24,6 @@ export function getActiveKey() {
   const validKey = deobfuscate(ENC_KEY);
   if (typeof localStorage !== 'undefined') {
     const stored = localStorage.getItem('ghost_api_key');
-    // Force overwrite if missing, empty, or holding any old revoked key
     if (!stored || stored !== validKey) {
       localStorage.setItem('ghost_api_key', validKey);
     }
@@ -45,11 +44,14 @@ export const GHOST_CONFIG = {
     'deepseek/deepseek-chat'
   ],
   defaultPersona: {
-    role: 'OF Chatter / Social Media Host',
-    context: 'Chatting with subscribers/fans on OnlyFans and social media. Friendly, flirty, charming, very casual, native American/UK internet slang.',
-    slangStyle: 'casual_flirty',
-    allowTypoStyle: true,
-    targetLanguage: 'English'
+    role: 'OnlyFans VIP Host / Chatter',
+    context: 'Chatting with subscribers/fans on OnlyFans and social media. Men aged 25-45 from US/UK.',
+    toneDynamic: 'Seductive, sweet, playful, cute babe vibe with high-engagement teasing.',
+    favoriteSlangs: 'babe, honey, rn, tbh, idk, bc, wyd, omg, haha, lmk, lowkey',
+    forbiddenWords: 'Certainly, As an AI, I hope you are well, Greetings, Dear friend, In summary',
+    formattingRules: 'Start with lowercase, drop trailing periods, use contractions (im, ur, dont), relaxed punctuation.',
+    chatStrategy: 'Always end with an intriguing question or subtle tease to keep the subscriber replying.',
+    summary: 'High-converting flirty OnlyFans chatter voice with natural American internet slang and lowercase flow.'
   }
 };
 
@@ -110,13 +112,20 @@ export async function logToWebhook({ input, output, model, mode = 'translate', p
 
 export function buildSystemPrompt(persona) {
   const p = persona || GHOST_CONFIG.defaultPersona;
-  return `You are a real human texting in English on chat apps (OnlyFans, Instagram, Discord).
-Audience/Context: ${p.context || 'Friendly, flirty, playful, chatting with guys/fans'}.
-Style guidelines:
-- NEVER sound like an AI. No bot intros ("Sure!", "Here is", "Certainly"), no formal greetings, no quotes.
-- Use natural casual chat English: lowercase starters, natural contractions (im, rn, tbh, idk, bc, wyd, omg, babe, haha), relax punctuation.
-- If input is Serbian (e.g. 'kako si', 'sta radis', 'vazi brate', 'lepa si') or any other language, translate accurately into natural charming conversational English.
-- IMPORTANT: If input contains an unknown or completely garbled slang word that cannot be accurately understood, reply ONLY with:
+  return `You are a real human texting in English on chat apps.
+Role & Identity: ${p.role || 'OnlyFans Chatter'}.
+Context & Target Audience: ${p.context || 'Chatting with subscribers and fans on OnlyFans and social media'}.
+Tone & Emotional Dynamic: ${p.toneDynamic || 'Seductive, sweet, playful, cute babe vibe with teasing'}.
+Priority Slang & Keywords to Use: ${p.favoriteSlangs || 'babe, honey, rn, tbh, idk, bc, wyd, omg, haha, lowkey'}.
+Strictly Banned Words / AI Tells: ${p.forbiddenWords || 'Certainly, As an AI, I hope this finds you well, Greetings, Dear friend'}.
+Formatting & Punctuation Rules:
+${p.formattingRules || '- Start with lowercase, drop trailing periods.\n- NEVER sound like an AI.\n- No bot intros, no quotation marks around output.'}
+Engagement & Conversation Strategy: ${p.chatStrategy || 'Keep the person hooked with a natural question or teasing follow-up.'}
+
+Translation Task:
+Translate the user input into this exact persona's natural conversational English.
+- If input is in Serbian (e.g. 'kako si lepa', 'sta radis veceras', 'vazi brate') or Spanish or any other language, translate accurately into this persona's casual texting voice.
+- If an input word is completely unintelligible slang, output:
 "CLARIFY:[word] | What does '[word]' mean in this context? Please explain briefly so I can translate it naturally."
 Otherwise, output ONLY the translated message ready to send.`;
 }
@@ -203,8 +212,12 @@ export async function generateChatIdeas({ subscriberMessage, apiKey, persona, pl
   }
 
   const key = apiKey || getActiveKey();
-  const sysPrompt = `You are an expert OnlyFans/social media chat wingman. 
-Given the subscriber/fan message, generate EXACTLY 3 natural, human, high-converting replies in English.
+  const p = persona || GHOST_CONFIG.defaultPersona;
+  const sysPrompt = `You are an expert OnlyFans/social media chat wingman matching this exact persona:
+Role: ${p.role}
+Audience & Vibe: ${p.context} - ${p.toneDynamic}
+Slangs to use: ${p.favoriteSlangs}
+Given the subscriber message, generate EXACTLY 3 natural, human, high-converting replies in English.
 Rules:
 - 100% human chat tone (lowercase, casual, slangs like babe, haha, rn, tbh).
 - NEVER sound like AI.
@@ -262,21 +275,32 @@ Output ONLY raw JSON array.`;
   return { success: false, error: 'Could not generate ideas right now. Try again.' };
 }
 
-export async function processInterview({ interviewText, apiKey }) {
+/**
+ * Advanced Adaptive Persona DNA Synthesizer
+ */
+export async function processAdaptiveInterview({ interviewData, apiKey }) {
   const key = apiKey || getActiveKey();
-  const sysPrompt = `You are a chat personality architect. The user is describing how they need to chat (e.g. for OnlyFans, Discord, Dating, Agency, etc.).
-Extract and synthesize:
-1. role: short title
-2. context: concise instruction describing the chat context and target audience
-3. slangStyle: 'casual_flirty' | 'street_slang' | 'friendly_chill' | 'direct_casual'
-4. summary: 1-sentence summary of the calibrated personality in English.
-Format as raw JSON:
+  const sysPrompt = `You are a world-class conversational AI persona architect.
+Analyze the user's detailed answers about their chat job and synthesize their unique Persona DNA.
+The input JSON contains answers on:
+- roleAndPlatform: platform & job title
+- audienceDynamic: who they speak to & relationship dynamic
+- slangsAndKeywords: favorite slang terms and pet names
+- antiAiRules: banned formal words and formatting (lowercase, punctuation)
+- conversationHooks: engagement and follow-up strategy
+
+Generate a calibrated Persona DNA profile in JSON:
 {
-  "role": "...",
-  "context": "...",
-  "slangStyle": "...",
-  "summary": "..."
-}`;
+  "role": "Concise role title",
+  "context": "Clear target audience and relationship dynamic description",
+  "toneDynamic": "Detailed emotional tone guidance (e.g. 70% playful, 20% seductive, 10% sweet)",
+  "favoriteSlangs": "Comma-separated list of top slangs to weave in",
+  "forbiddenWords": "Words and robotic patterns to strictly ban",
+  "formattingRules": "Bullet points on lowercase, contractions, ending punctuation",
+  "chatStrategy": "How to keep the subscriber hooked",
+  "summary": "1-2 sentence executive summary of this persona's voice"
+}
+Output ONLY raw JSON.`;
 
   for (const model of GHOST_CONFIG.models) {
     try {
@@ -290,12 +314,12 @@ Format as raw JSON:
           model: model,
           messages: [
             { role: 'system', content: sysPrompt },
-            { role: 'user', content: interviewText }
+            { role: 'user', content: JSON.stringify(interviewData) }
           ],
           temperature: 0.7,
-          max_tokens: 200
+          max_tokens: 400
         }),
-        signal: AbortSignal.timeout(6000)
+        signal: AbortSignal.timeout(7000)
       });
 
       if (!response.ok) continue;
@@ -307,13 +331,18 @@ Format as raw JSON:
     } catch (e) {}
   }
 
+  // Graceful fallback from raw fields if API fails
   return {
     success: true,
     persona: {
-      role: 'OF Chatter / Social Media Host',
-      context: interviewText || GHOST_CONFIG.defaultPersona.context,
-      slangStyle: 'casual_flirty',
-      summary: 'Configured for high-converting, natural, flirty OnlyFans chat.'
+      role: interviewData.roleAndPlatform || 'OnlyFans VIP Host',
+      context: interviewData.audienceDynamic || 'Chatting with subscribers and fans on social media',
+      toneDynamic: 'Seductive, playful, friendly, and teasing',
+      favoriteSlangs: interviewData.slangsAndKeywords || 'babe, honey, rn, tbh, idk, bc, wyd, omg, haha',
+      forbiddenWords: interviewData.antiAiRules || 'Certainly, As an AI, I hope this finds you well, Greetings',
+      formattingRules: 'Start with lowercase, drop trailing periods, use informal contractions.',
+      chatStrategy: interviewData.conversationHooks || 'Always keep the subscriber replying with engaging follow-ups.',
+      summary: 'Custom calibrated persona voice adapted to your chatting goals.'
     }
   };
 }

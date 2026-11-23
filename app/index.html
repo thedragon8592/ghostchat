@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#0d0e12">
   <meta name="description" content="Ultra-fast human chat translator and OF wingman">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=20261122d">
+  <link rel="stylesheet" href="style.css?v=20261122e">
 </head>
 <body>
   <!-- Toast Notifications Container -->
@@ -113,20 +113,92 @@
         </div>
       </section>
 
-      <!-- TAB 3: INTERVIEW & PERSONA CALIBRATION -->
+      <!-- TAB 3: ADAPTIVE DEEP INTERVIEW -->
       <section id="tabInterview" class="tab-panel">
-        <div class="card interview-card">
-          <h2 class="card-title">🎙️ AI Persona Setup & Interview</h2>
-          <p class="card-desc">Tell the AI exactly what context you are chatting in (e.g. OnlyFans agency, Discord, dating, client chatting) and how you want to speak. The AI auto-tunes all prompt rules automatically.</p>
+        <!-- Active Persona DNA Card -->
+        <div id="activeDnaCard" class="card" style="border-color:var(--accent);background:#0e1c15;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h2 class="card-title" style="color:var(--accent);margin:0;">🧬 Active Persona DNA</h2>
+            <button id="btnToggleEditInterview" class="action-btn small secondary">✏️ Edit Profile</button>
+          </div>
+          <p id="dnaSummary" style="font-size:13px;color:#e2e8f0;line-height:1.45;margin-bottom:8px;">Loading persona DNA...</p>
+          <div style="font-size:11px;color:#94a3b8;display:flex;flex-wrap:wrap;gap:8px;">
+            <span><strong>Role:</strong> <span id="dnaRole" style="color:#fff;">-</span></span>
+            <span>•</span>
+            <span><strong>Slangs:</strong> <span id="dnaSlangs" style="color:var(--accent);">-</span></span>
+          </div>
+        </div>
 
-          <label class="field-label" for="interviewPrompt">Describe your context & style rules:</label>
-          <textarea id="interviewPrompt" rows="4" placeholder="e.g. I am working as an OnlyFans chatter with guys from the US. Always sound sweet, flirty, use 'babe', contractions like 'rn', 'tbh', 'wyd', and short lowercase sentences..."></textarea>
-          
-          <button id="btnRunInterview" class="action-btn primary full-width">⚡ Calibrate & Save Personality</button>
+        <!-- Form Wizard Container -->
+        <div id="interviewFormCard" class="card interview-card">
+          <h2 class="card-title">🎙️ Deep Persona Calibration Interview</h2>
+          <p class="card-desc">Answer these 5 core dimensions so the AI defines your exact voice, slangs, and chatting behavior. You can edit this anytime.</p>
 
-          <div id="currentPersonaCard" class="active-persona-box">
-            <h3>Active Profile:</h3>
-            <p id="personaSummary">Loading profile...</p>
+          <!-- Question 1 -->
+          <div style="margin-bottom:14px;">
+            <label class="field-label">1. Platform & Exact Role:</label>
+            <div class="tone-bar" style="margin-bottom:6px;">
+              <button type="button" class="tone-chip wizard-chip" data-target="qRole" data-val="OnlyFans VIP Host / Chatter">OnlyFans VIP Chatter</button>
+              <button type="button" class="tone-chip wizard-chip" data-target="qRole" data-val="Instagram Model DMs Host">Instagram DMs</button>
+              <button type="button" class="tone-chip wizard-chip" data-target="qRole" data-val="Dating App Match">Dating / Tinder</button>
+              <button type="button" class="tone-chip wizard-chip" data-target="qRole" data-val="Discord Community Host">Discord</button>
+            </div>
+            <input type="text" id="qRole" placeholder="e.g. OnlyFans VIP Chatter, 21yo playful sweet girl">
+          </div>
+
+          <!-- Question 2 -->
+          <div style="margin-bottom:14px;">
+            <label class="field-label">2. Target Audience & Relationship Dynamic:</label>
+            <div class="tone-bar" style="margin-bottom:6px;">
+              <button type="button" class="tone-chip wizard-chip" data-target="qAudience" data-val="Men aged 25-45 from US/UK. Flirty, teasing, warm, and affectionate.">US/UK Men (Flirty & Teasing)</button>
+              <button type="button" class="tone-chip wizard-chip" data-target="qAudience" data-val="Subscribers looking for Sweet Girlfriend Experience (GFE) with deep attention.">Sweet GFE Vibe</button>
+              <button type="button" class="tone-chip wizard-chip" data-target="qAudience" data-val="Casual, funny, high-energy bantering bro.">Casual & Bantering</button>
+            </div>
+            <textarea id="qAudience" rows="2" placeholder="e.g. Men 25-45 from USA. Want to feel special, romantic teasing and high engagement."></textarea>
+          </div>
+
+          <!-- Question 3 -->
+          <div style="margin-bottom:14px;">
+            <label class="field-label">3. Favorite Slangs & Pet Names to Prioritize:</label>
+            <div class="tone-bar" style="margin-bottom:6px;">
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="babe">babe</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="honey">honey</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="rn">rn</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="tbh">tbh</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="wyd">wyd</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="ngl">ngl</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="lowkey">lowkey</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="haha">haha</button>
+              <button type="button" class="tone-chip append-chip" data-target="qSlangs" data-val="omg">omg</button>
+            </div>
+            <input type="text" id="qSlangs" placeholder="e.g. babe, honey, rn, tbh, idk, wyd, omg, haha, lowkey">
+          </div>
+
+          <!-- Question 4 -->
+          <div style="margin-bottom:14px;">
+            <label class="field-label">4. Anti-AI Rules & Banned Patterns:</label>
+            <div class="tone-bar" style="margin-bottom:6px;">
+              <button type="button" class="tone-chip append-chip" data-target="qBanned" data-val="Never say 'Certainly' or 'As an AI'.">Ban 'Certainly / AI'</button>
+              <button type="button" class="tone-chip append-chip" data-target="qBanned" data-val="Start with lowercase.">All Lowercase</button>
+              <button type="button" class="tone-chip append-chip" data-target="qBanned" data-val="Drop ending periods on single sentences.">Drop Ending Dots</button>
+            </div>
+            <textarea id="qBanned" rows="2" placeholder="e.g. Never say 'As an AI', 'Certainly', 'I hope you are well'. Keep sentences lowercase without formal ending dots."></textarea>
+          </div>
+
+          <!-- Question 5 -->
+          <div style="margin-bottom:16px;">
+            <label class="field-label">5. Conversation Keeping & Hook Strategy:</label>
+            <div class="tone-bar" style="margin-bottom:6px;">
+              <button type="button" class="tone-chip wizard-chip" data-target="qHooks" data-val="Always end with an open-ended question or playful tease to keep them talking.">Always Ask a Question</button>
+              <button type="button" class="tone-chip wizard-chip" data-target="qHooks" data-val="Subtly hint at exciting exclusive content or PPV tips without being pushy.">Hint at Exclusive PPV</button>
+              <button type="button" class="tone-chip wizard-chip" data-target="qHooks" data-val="Keep messages short, punchy, and confident (2-5 words).">Short & Punchy</button>
+            </div>
+            <input type="text" id="qHooks" placeholder="e.g. Always end with an intriguing question or playful tease to keep them replying.">
+          </div>
+
+          <div style="display:flex;gap:8px;">
+            <button id="btnRunAdaptiveInterview" class="action-btn primary full-width">⚡ Calibrate & Save Persona DNA</button>
+            <button id="btnResetDefaultDna" type="button" class="action-btn danger small" title="Reset to Default OF Voice">Reset</button>
           </div>
         </div>
       </section>
@@ -190,6 +262,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=20261122d"></script>
+  <script type="module" src="app.js?v=20261122e"></script>
 </body>
 </html>
