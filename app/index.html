@@ -10,9 +10,12 @@
   <meta name="theme-color" content="#0d0e12">
   <meta name="description" content="Ultra-fast human chat translator and OF wingman">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=20261122b">
+  <link rel="stylesheet" href="style.css?v=20261122d">
 </head>
 <body>
+  <!-- Toast Notifications Container -->
+  <div id="toastContainer"></div>
+
   <div class="app-container">
     <!-- Header -->
     <header class="app-header">
@@ -34,6 +37,12 @@
       <button class="nav-tab" data-tab="tabInterview">🎙️ Interview</button>
     </nav>
 
+    <!-- Dynamic Status Notice (Visual Feedback Effect) -->
+    <div id="statusNotice" class="hidden">
+      <span id="statusNoticeText">Ready</span>
+      <button id="btnNoticeAction" class="action-btn small hidden">Retry ↺</button>
+    </div>
+
     <!-- Main Content Area -->
     <main class="main-content">
       <!-- TAB 1: TRANSLATOR -->
@@ -47,12 +56,15 @@
         </div>
 
         <!-- Input Box -->
-        <div class="input-card">
+        <div id="inputCard" class="input-card">
           <label for="inputText" class="field-label">Type your message in any language:</label>
           <textarea id="inputText" placeholder="Type here in Serbian or any language (e.g. kako si lepa, sta radis)..." rows="3" autofocus></textarea>
           <div class="input-actions">
             <span class="hint-text">Press Enter to translate & auto-copy</span>
-            <button id="btnTranslate" class="action-btn primary">Translate ➔</button>
+            <button id="btnTranslate" class="action-btn primary">
+              <span id="btnTranslateSpinner" class="hidden">⏳</span>
+              <span id="btnTranslateText">Translate ➔</span>
+            </button>
           </div>
         </div>
 
@@ -69,10 +81,10 @@
         </div>
 
         <!-- Output Box -->
-        <div class="output-card">
+        <div id="outputCard" class="output-card">
           <div class="output-header">
             <span class="field-label">Human English Translation:</span>
-            <span id="copyBadge" class="copy-badge hidden">✓ Auto-copied to clipboard</span>
+            <span id="copyBadge" class="copy-badge hidden">✓ Auto-copied</span>
           </div>
           <div id="outputText" class="output-content" placeholder="Translation appears here and copies automatically..."></div>
           <div class="output-actions">
@@ -84,12 +96,15 @@
 
       <!-- TAB 2: WINGMAN IDEAS -->
       <section id="tabIdeas" class="tab-panel">
-        <div class="input-card">
+        <div id="fanInputCard" class="input-card">
           <label for="fanMessageInput" class="field-label">Paste the fan/subscriber message here:</label>
           <textarea id="fanMessageInput" placeholder="e.g. Hey what are you doing tonight? / Why haven't you replied yet?" rows="3"></textarea>
           <div class="input-actions">
             <span class="hint-text">AI generates 3 human replies for you</span>
-            <button id="btnGenerateIdeas" class="action-btn primary">💡 Generate Ideas</button>
+            <button id="btnGenerateIdeas" class="action-btn primary">
+              <span id="btnIdeasSpinner" class="hidden">⏳</span>
+              <span id="btnIdeasText">💡 Generate Ideas</span>
+            </button>
           </div>
         </div>
 
@@ -116,6 +131,28 @@
         </div>
       </section>
     </main>
+
+    <!-- First-Time Interview Onboarding Prompt Modal -->
+    <div id="interviewPromptModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>🎙️ Tune Your AI Voice</h3>
+          <button id="btnCloseInterviewPrompt" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:#cbd5e1;line-height:1.5;margin-bottom:12px;">
+            Would you like to do a quick 30-second interview so the AI learns your exact chatting role, slangs, and tone? 
+          </p>
+          <p style="font-size:12px;color:#94a3b8;line-height:1.4;margin-bottom:16px;">
+            You can also skip for now and take it at any time from the <strong>"Interview"</strong> tab.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button id="btnStartInterviewModal" class="action-btn primary full-width">🎙️ Start Quick Interview</button>
+            <button id="btnSkipInterviewModal" class="action-btn secondary full-width">Skip for Now (Use Default Voice)</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="modal-backdrop hidden">
@@ -153,6 +190,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=20261122b"></script>
+  <script type="module" src="app.js?v=20261122d"></script>
 </body>
 </html>

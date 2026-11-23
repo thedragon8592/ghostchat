@@ -3,8 +3,12 @@ import { GHOST_CONFIG, translateChat, generateChatIdeas, processInterview, getAc
 // DOM Elements
 const tabBtns = document.querySelectorAll('.nav-tab');
 const tabPanels = document.querySelectorAll('.tab-panel');
+const inputCard = document.getElementById('inputCard');
+const outputCard = document.getElementById('outputCard');
 const inputText = document.getElementById('inputText');
 const btnTranslate = document.getElementById('btnTranslate');
+const btnTranslateSpinner = document.getElementById('btnTranslateSpinner');
+const btnTranslateText = document.getElementById('btnTranslateText');
 const outputText = document.getElementById('outputText');
 const copyBadge = document.getElementById('copyBadge');
 const btnManualCopy = document.getElementById('btnManualCopy');
@@ -16,15 +20,29 @@ const btnSendClarify = document.getElementById('btnSendClarify');
 const toneChips = document.querySelectorAll('.tone-chip');
 const modelBadge = document.getElementById('modelBadge');
 
+// Status Notice Banner Elements
+const statusNotice = document.getElementById('statusNotice');
+const statusNoticeText = document.getElementById('statusNoticeText');
+const btnNoticeAction = document.getElementById('btnNoticeAction');
+
 // Ideas Tab Elements
+const fanInputCard = document.getElementById('fanInputCard');
 const fanMessageInput = document.getElementById('fanMessageInput');
 const btnGenerateIdeas = document.getElementById('btnGenerateIdeas');
+const btnIdeasSpinner = document.getElementById('btnIdeasSpinner');
+const btnIdeasText = document.getElementById('btnIdeasText');
 const ideasContainer = document.getElementById('ideasContainer');
 
 // Interview Tab Elements
 const interviewPrompt = document.getElementById('interviewPrompt');
 const btnRunInterview = document.getElementById('btnRunInterview');
 const personaSummary = document.getElementById('personaSummary');
+
+// Interview Onboarding Modal Elements
+const interviewPromptModal = document.getElementById('interviewPromptModal');
+const btnCloseInterviewPrompt = document.getElementById('btnCloseInterviewPrompt');
+const btnStartInterviewModal = document.getElementById('btnStartInterviewModal');
+const btnSkipInterviewModal = document.getElementById('btnSkipInterviewModal');
 
 // Settings Elements
 const btnSettings = document.getElementById('btnSettings');
@@ -33,13 +51,60 @@ const btnCloseSettings = document.getElementById('btnCloseSettings');
 const apiKeyInput = document.getElementById('apiKeyInput');
 const btnSaveSettings = document.getElementById('btnSaveSettings');
 const offlineBanner = document.getElementById('offlineBanner');
+const toastContainer = document.getElementById('toastContainer');
 
 // State
 let currentPersona = null;
 let currentTone = 'flirty';
+let lastFailedText = '';
+
+// Toast Notification Helper
+function showToast(message, type = 'info', duration = 3500) {
+  if (!toastContainer) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${message}</span>`;
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('hiding');
+    setTimeout(() => toast.remove(), 250);
+  }, duration);
+}
+
+// Visual Status Effect Helper
+function setStatus(state, message, showRetry = false) {
+  if (!statusNotice) return;
+  statusNotice.className = `status-${state}`;
+  statusNoticeText.textContent = message;
+  statusNotice.classList.remove('hidden');
+
+  if (showRetry && btnNoticeAction) {
+    btnNoticeAction.classList.remove('hidden');
+    btnNoticeAction.onclick = () => {
+      if (lastFailedText) {
+        inputText.value = lastFailedText;
+        handleTranslate();
+      }
+    };
+  } else if (btnNoticeAction) {
+    btnNoticeAction.classList.add('hidden');
+  }
+
+  if (state === 'success') {
+    outputCard?.classList.add('success-glow');
+    setTimeout(() => {
+      outputCard?.classList.remove('success-glow');
+      statusNotice?.classList.add('hidden');
+    }, 4500);
+  } else if (state === 'error') {
+    outputCard?.classList.add('error-glow');
+    setTimeout(() => outputCard?.classList.remove('error-glow'), 5000);
+  }
+}
 
 function initApp() {
-  // Unconditionally sync the valid active API Key into localStorage
+  // Sync the active valid API key into localStorage
   const validKey = getActiveKey();
   apiKeyInput.value = validKey;
 
@@ -58,22 +123,38 @@ function initApp() {
 
   // Setup Service Worker for PWA (with cache buster)
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      // Register fresh worker
-      navigator.serviceWorker.register('sw.js?v=3').catch(() => {});
-    });
+    navigator.serviceWorker.register('sw.js?v=4').catch(() => {});
   }
 
+  // Check first-time interview prompt
+  checkInterviewPrompt();
+
   // Network listeners
-  window.addEventListener('online', () => offlineBanner.classList.add('hidden'));
-  window.addEventListener('offline', () => offlineBanner.classList.remove('hidden'));
+  window.addEventListener('online', () => {
+    offlineBanner.classList.add('hidden');
+    showToast('Internet connection restored', 'success', 2500);
+  });
+  window.addEventListener('offline', () => {
+    offlineBanner.classList.remove('hidden');
+    showToast('No internet connection. Waiting for network...', 'warning', 4000);
+  });
   if (!navigator.onLine) offlineBanner.classList.remove('hidden');
 
   bindEvents();
 }
 
+function checkInterviewPrompt() {
+  const completed = localStorage.getItem('ghost_interview_completed');
+  const skipped = localStorage.getItem('ghost_interview_skipped');
+  if (!completed && !skipped) {
+    setTimeout(() => {
+      interviewPromptModal?.classList.remove('hidden');
+    }, 1200);
+  }
+}
+
 function updatePersonaDisplay() {
-  if (currentPersona) {
+  if (currentPersona && personaSummary) {
     personaSummary.textContent = `${currentPersona.role || 'OF Chatter'}: ${currentPersona.summary || currentPersona.context}`;
   }
 }
@@ -96,6 +177,7 @@ function bindEvents() {
       toneChips.forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       currentTone = chip.dataset.tone;
+      showToast(`Tone changed to: ${chip.textContent}`, 'info', 1500);
     });
   });
 
@@ -108,12 +190,22 @@ function bindEvents() {
     }
   });
 
+  // On first input focus, if interview not completed or skipped, prompt
+  inputText.addEventListener('focus', () => {
+    const completed = localStorage.getItem('ghost_interview_completed');
+    const skipped = localStorage.getItem('ghost_interview_skipped');
+    if (!completed && !skipped) {
+      interviewPromptModal?.classList.remove('hidden');
+    }
+  }, { once: true });
+
   // Manual Copy
   btnManualCopy.addEventListener('click', () => {
     const text = outputText.textContent.trim();
     if (text) {
       navigator.clipboard.writeText(text);
-      showCopyBadge('✓ Copied to clipboard');
+      showToast('✓ Copied to clipboard!', 'success', 2000);
+      showCopyBadge('✓ Copied');
     }
   });
 
@@ -123,6 +215,9 @@ function bindEvents() {
     outputText.textContent = '';
     clarifyCard.classList.add('hidden');
     copyBadge.classList.add('hidden');
+    statusNotice.classList.add('hidden');
+    outputCard.classList.remove('success-glow', 'error-glow');
+    inputCard.classList.remove('sending');
     inputText.focus();
   });
 
@@ -143,6 +238,26 @@ function bindEvents() {
   // Interview Calibrate
   btnRunInterview.addEventListener('click', handleInterview);
 
+  // Interview Modal Actions
+  btnStartInterviewModal?.addEventListener('click', () => {
+    interviewPromptModal?.classList.add('hidden');
+    // Switch to tab 3
+    const interviewTabBtn = document.querySelector('[data-tab="tabInterview"]');
+    interviewTabBtn?.click();
+    interviewPrompt?.focus();
+  });
+
+  btnSkipInterviewModal?.addEventListener('click', () => {
+    interviewPromptModal?.classList.add('hidden');
+    localStorage.setItem('ghost_interview_skipped', 'true');
+    showToast('Using default flirty/casual voice. You can calibrate anytime under "Interview" tab.', 'info', 3000);
+  });
+
+  btnCloseInterviewPrompt?.addEventListener('click', () => {
+    interviewPromptModal?.classList.add('hidden');
+    localStorage.setItem('ghost_interview_skipped', 'true');
+  });
+
   // Settings Modal
   btnSettings.addEventListener('click', () => {
     apiKeyInput.value = getActiveKey();
@@ -155,18 +270,30 @@ function bindEvents() {
       localStorage.setItem('ghost_api_key', key);
     }
     settingsModal.classList.add('hidden');
+    showToast('Settings saved successfully', 'success', 2000);
   });
 }
 
 async function handleTranslate() {
   const text = inputText.value.trim();
-  if (!text) return;
+  if (!text) {
+    showToast('Please type a message first', 'warning', 2000);
+    return;
+  }
 
+  // 1. Visual Effect: Sending state
+  inputCard.classList.add('sending');
+  outputCard.classList.remove('success-glow', 'error-glow');
   btnTranslate.disabled = true;
-  btnTranslate.textContent = 'Translating...';
-  outputText.textContent = 'Translating instantly...';
+  btnTranslateSpinner.classList.remove('hidden');
+  btnTranslateText.textContent = 'Translating...';
+  outputText.textContent = 'Translating in real-time...';
+  outputText.classList.add('loading');
   clarifyCard.classList.add('hidden');
   copyBadge.classList.add('hidden');
+
+  setStatus('sending', '⏳ Sending message to AI... processing response');
+  showToast('Sending message to AI...', 'info', 1800);
 
   // Inject active tone into persona context
   const activePersona = { ...currentPersona };
@@ -185,34 +312,58 @@ async function handleTranslate() {
     platform: 'Web App'
   });
 
+  // End sending state
+  inputCard.classList.remove('sending');
+  outputText.classList.remove('loading');
   btnTranslate.disabled = false;
-  btnTranslate.textContent = 'Translate ➔';
+  btnTranslateSpinner.classList.add('hidden');
+  btnTranslateText.textContent = 'Translate ➔';
 
+  // 2. Handle Error State
   if (!result.success) {
+    lastFailedText = text;
     outputText.textContent = `Error: ${result.error}`;
+    setStatus('error', `❌ Not sent: ${result.error}`, true);
+    showToast(`❌ Failed to send: ${result.error}`, 'error', 4500);
     return;
   }
 
+  // 3. Handle Clarification
   if (result.isClarification) {
     clarifyCard.classList.remove('hidden');
     clarifyText.textContent = result.text;
     outputText.textContent = '(Waiting for clarification to translate accurately...)';
     clarifyInput.focus();
+    setStatus('error', '⚠️ Word clarification needed before translation can complete');
+    showToast('⚠️ Please clarify the highlighted word', 'warning', 3000);
     return;
   }
 
+  // 4. Handle Success State
   outputText.textContent = result.text;
   modelBadge.textContent = result.modelUsed.split('/')[1] || 'AI Ready';
-  showCopyBadge('✓ Auto-copied to clipboard');
+  showCopyBadge('✓ Auto-copied');
+  setStatus('success', '✓ Message sent & translated! Automatically copied to your clipboard.');
+  showToast('✓ Message sent & copied to clipboard!', 'success', 3000);
+
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try { navigator.vibrate([40]); } catch (e) {}
+  }
 }
 
 async function handleGenerateIdeas() {
   const msg = fanMessageInput.value.trim();
-  if (!msg) return;
+  if (!msg) {
+    showToast('Please paste a fan message first', 'warning', 2000);
+    return;
+  }
 
+  fanInputCard?.classList.add('sending');
   btnGenerateIdeas.disabled = true;
-  btnGenerateIdeas.textContent = 'Generating...';
+  btnIdeasSpinner.classList.remove('hidden');
+  btnIdeasText.textContent = 'Generating...';
   ideasContainer.innerHTML = '<div class="placeholder-msg">Generating 3 human options...</div>';
+  showToast('Generating 3 replies...', 'info', 2000);
 
   const res = await generateChatIdeas({
     subscriberMessage: msg,
@@ -221,11 +372,14 @@ async function handleGenerateIdeas() {
     platform: 'Web App'
   });
 
+  fanInputCard?.classList.remove('sending');
   btnGenerateIdeas.disabled = false;
-  btnGenerateIdeas.textContent = '💡 Generate Ideas';
+  btnIdeasSpinner.classList.add('hidden');
+  btnIdeasText.textContent = '💡 Generate Ideas';
 
   if (!res.success || !res.ideas) {
     ideasContainer.innerHTML = `<div class="placeholder-msg" style="color:#ef4444">${res.error || 'Failed to generate ideas'}</div>`;
+    showToast(`❌ Failed to generate ideas: ${res.error}`, 'error', 3500);
     return;
   }
 
@@ -245,22 +399,26 @@ async function handleGenerateIdeas() {
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(idea.text);
       copyBtn.textContent = '✓ Copied';
+      showToast('✓ Idea copied to clipboard!', 'success', 2000);
       setTimeout(() => copyBtn.textContent = '📋 Copy & Send', 1500);
     });
 
     ideasContainer.appendChild(card);
   });
+
+  showToast('✓ 3 Ideas generated successfully!', 'success', 2500);
 }
 
 async function handleInterview() {
   const text = interviewPrompt.value.trim();
   if (!text) {
-    alert('Please describe your context or job.');
+    showToast('Please describe your context or job', 'warning', 2000);
     return;
   }
 
   btnRunInterview.disabled = true;
   btnRunInterview.textContent = 'Processing interview...';
+  showToast('AI is tuning your personality profile...', 'info', 2500);
 
   const res = await processInterview({
     interviewText: text,
@@ -273,8 +431,11 @@ async function handleInterview() {
   if (res.success && res.persona) {
     currentPersona = res.persona;
     localStorage.setItem('ghost_persona', JSON.stringify(currentPersona));
+    localStorage.setItem('ghost_interview_completed', 'true');
     updatePersonaDisplay();
-    alert('Personality calibrated and saved successfully! The translator will now adapt strictly to your style.');
+    showToast('✓ Personality calibrated & saved successfully!', 'success', 3500);
+  } else {
+    showToast('Could not save personality. Please try again.', 'error', 3000);
   }
 }
 
