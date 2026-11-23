@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ghostchat-v3-pure-en';
+const CACHE_NAME = 'ghostchat-v6-intuitive-context';
 const ASSETS = [
   './',
   'index.html',

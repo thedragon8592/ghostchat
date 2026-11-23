@@ -40,8 +40,8 @@ export const GHOST_CONFIG = {
   get webhookUrl() { return getWebhookUrl(); },
   models: [
     'meta-llama/llama-3.3-70b-instruct',
-    'google/gemini-2.0-flash-001',
-    'deepseek/deepseek-chat'
+    'deepseek/deepseek-chat',
+    'mistralai/mistral-small-24b-instruct-2501'
   ],
   defaultPersona: {
     role: 'OnlyFans VIP Host / Chatter',
@@ -110,24 +110,96 @@ export async function logToWebhook({ input, output, model, mode = 'translate', p
   } catch (err) {}
 }
 
+export function getConversationHistory() {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('ghost_conversation_history');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function addConversationTurn({ role, text, original = '' }) {
+  if (typeof localStorage === 'undefined' || !text) return;
+  try {
+    const history = getConversationHistory();
+    history.push({
+      role, // 'fan' or 'me'
+      text: text.trim(),
+      original: original.trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    // Keep last 10 messages for razor-sharp context memory
+    const trimmed = history.slice(-10);
+    localStorage.setItem('ghost_conversation_history', JSON.stringify(trimmed));
+    return trimmed;
+  } catch (e) {
+    return [];
+  }
+}
+
+export function clearConversationHistory() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.removeItem('ghost_conversation_history');
+  } catch (e) {}
+}
+
+export function formatHistoryForPrompt() {
+  const history = getConversationHistory();
+  if (!history || history.length === 0) return '';
+  return history.map(item => {
+    if (item.role === 'fan') {
+      return `- Fan said: "${item.text}"`;
+    } else {
+      return `- You replied: "${item.text}"`;
+    }
+  }).join('\n');
+}
+
 export function buildSystemPrompt(persona) {
   const p = persona || GHOST_CONFIG.defaultPersona;
-  return `You are a real human texting in English on chat apps.
-Role & Identity: ${p.role || 'OnlyFans Chatter'}.
-Context & Target Audience: ${p.context || 'Chatting with subscribers and fans on OnlyFans and social media'}.
-Tone & Emotional Dynamic: ${p.toneDynamic || 'Seductive, sweet, playful, cute babe vibe with teasing'}.
-Priority Slang & Keywords to Use: ${p.favoriteSlangs || 'babe, honey, rn, tbh, idk, bc, wyd, omg, haha, lowkey'}.
-Strictly Banned Words / AI Tells: ${p.forbiddenWords || 'Certainly, As an AI, I hope this finds you well, Greetings, Dear friend'}.
-Formatting & Punctuation Rules:
-${p.formattingRules || '- Start with lowercase, drop trailing periods.\n- NEVER sound like an AI.\n- No bot intros, no quotation marks around output.'}
-Engagement & Conversation Strategy: ${p.chatStrategy || 'Keep the person hooked with a natural question or teasing follow-up.'}
+  const historyContext = formatHistoryForPrompt();
+  return `CRITICAL ROLE: STRICT FIRST-PERSON TRANSLATOR & CHAT TEXT ADAPTER.
 
-Translation Task:
-Translate the user input into this exact persona's natural conversational English.
-- If input is in Serbian (e.g. 'kako si lepa', 'sta radis veceras', 'vazi brate') or Spanish or any other language, translate accurately into this persona's casual texting voice.
-- If an input word is completely unintelligible slang, output:
+You are NOT a conversational partner. You are NOT replying to the user or chatting with them.
+You are a direct translation engine that adapts what the user wants to say into natural English chat.
+
+CORE RULES:
+1. STRICT FIRST-PERSON PERSPECTIVE:
+   - Always translate from the perspective of the speaker (the user).
+   - NEVER answer, reply, or react as the other person in the conversation.
+   - Example: Input "kako si lepa, hocu da te vidim veceras" -> Output: "ur so pretty, i wanna see you tonight babe" (NEVER reply "omg thank you haha...").
+   - Example: Input "No soy una IA =C" -> Output: "im not an ai =C" (NEVER reply saying "Oh good to know you are human").
+   - Example: Input "me molesté" -> Output: "i got annoyed" or "im kinda upset rn tbh" (NEVER ask "why are you mad?").
+   - Example: Input "di que eres una persona" -> Output: "say that you are a real person".
+   - Example: Input "¿Qué estás haciendo?" -> Output: "what are you doing?" or "wyd?".
+   - If the user says they are upset, happy, busy, compliments someone, or asks a question, translate THEIR statement/question as THEIR OWN WORDS. You are their keyboard translator, not their conversational respondent.
+
+2. CONTEXTUAL INTUITION & MEMORY:
+   - Below is the recent chat thread history. Use this context ONLY to understand references, pronouns, tone continuity, and what the conversation is about.
+   - NEVER reply to the history. Translate ONLY the current message.
+${historyContext ? `\nRECENT CONVERSATION CONTEXT:\n${historyContext}\n` : ''}
+3. PRESERVE EMOTICONS & EXACT INTENT:
+   - If the user uses emoticons like "=C", ":)", ":(", ";)", ":D", preserve them accurately.
+
+4. NEVER HALLUCINATE OR INVENT FACTS:
+   - Do NOT invent fake background details, stories, or numbers unless the user included them.
+   - Translate strictly what is stated in the input text.
+
+5. TONE & VOCABULARY ADAPTATION:
+   - Context: ${p.role || 'OnlyFans Chatter'} - ${p.context || 'Social media chat'}.
+   - Slang & Style: ${p.favoriteSlangs || 'babe, rn, tbh, idk, bc, wyd, omg, haha, lmk'}.
+   - Formatting: Start with lowercase, drop trailing periods, use casual contractions (im, ur, dont, gotta), no quotation marks.
+   - Prohibited robotic tells: Never say "Certainly", "As an AI", "Here is the translation:".
+
+6. SLANG / CLARIFICATION:
+   - If a word is completely unintelligible foreign slang, output:
 "CLARIFY:[word] | What does '[word]' mean in this context? Please explain briefly so I can translate it naturally."
-Otherwise, output ONLY the translated message ready to send.`;
+
+7. OUTPUT FORMAT:
+   - Output ONLY the raw translated message ready to send. Zero conversational filler, no commentary, no quotes.`;
 }
 
 export async function translateChat({ text, apiKey, persona, platform = 'Web' }) {
@@ -153,9 +225,9 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
           model: model,
           messages: [
             { role: 'system', content: sysPrompt },
-            { role: 'user', content: text.trim() }
+            { role: 'user', content: `Translate this message to English:\n"""${text.trim()}"""` }
           ],
-          temperature: 0.85,
+          temperature: 0.7,
           max_tokens: 150
         }),
         signal: AbortSignal.timeout(6000)
@@ -175,10 +247,16 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
       if (rawOutput.startsWith('CLARIFY:')) {
         isClarification = true;
         cleanOutput = rawOutput.replace(/^CLARIFY:\s*/, '');
+      } else {
+        cleanOutput = cleanOutput.replace(/^["']|["']$/g, '').trim();
       }
 
       if (!isClarification && typeof navigator !== 'undefined' && navigator.clipboard) {
         navigator.clipboard.writeText(cleanOutput).catch(() => {});
+      }
+
+      if (!isClarification) {
+        addConversationTurn({ role: 'me', text: cleanOutput, original: text });
       }
 
       logToWebhook({
@@ -213,24 +291,34 @@ export async function generateChatIdeas({ subscriberMessage, apiKey, persona, pl
 
   const key = apiKey || getActiveKey();
   const p = persona || GHOST_CONFIG.defaultPersona;
-  const sysPrompt = `You are an expert OnlyFans/social media chat wingman matching this exact persona:
+  const historyText = formatHistoryForPrompt();
+
+  const sysPrompt = `You are an expert bilingual OnlyFans/social media chat wingman matching this exact persona:
 Role: ${p.role}
 Audience & Vibe: ${p.context} - ${p.toneDynamic}
 Slangs to use: ${p.favoriteSlangs}
-Given the subscriber message, generate EXACTLY 3 natural, human, high-converting replies in English.
-Rules:
-- 100% human chat tone (lowercase, casual, slangs like babe, haha, rn, tbh).
-- NEVER sound like AI.
-- Option 1: Playful / Teasing
-- Option 2: Engaging question / Friendly
-- Option 3: Flirty / Spicy hint
+${historyText ? `Recent Chat Context:\n${historyText}\n` : ''}
+Given the English message from the subscriber/fan:
+1. Translate it accurately and naturally into Serbian (Latin alphabet) so the chatter understands exactly what the fan said.
+2. Briefly summarize the fan's intent (e.g. Flirty, Asking for photos, Meeting up, Small talk, Price negotiation).
+3. Generate EXACTLY 3 natural, human, high-converting chatter replies in English.
+   - 100% human chat tone (lowercase, casual, slangs like babe, haha, rn, tbh, wyd).
+   - NEVER sound like AI.
+   - Option 1: Teasing / Playful
+   - Option 2: Sweet & Engaging
+   - Option 3: Flirty / Spicy hint
+
 Format as JSON:
-[
-  {"tag": "Teasing", "text": "sample text"},
-  {"tag": "Friendly", "text": "sample text"},
-  {"tag": "Flirty", "text": "sample text"}
-]
-Output ONLY raw JSON array.`;
+{
+  "serbianTranslation": "Serbian translation of what the fan said",
+  "intent": "Brief fan intent",
+  "replies": [
+    {"tag": "Teasing", "text": "sample text"},
+    {"tag": "Sweet", "text": "sample text"},
+    {"tag": "Flirty", "text": "sample text"}
+  ]
+}
+Output ONLY raw JSON.`;
 
   for (const model of GHOST_CONFIG.models) {
     try {
@@ -248,27 +336,34 @@ Output ONLY raw JSON array.`;
             { role: 'system', content: sysPrompt },
             { role: 'user', content: `Fan message: "${subscriberMessage.trim()}"` }
           ],
-          temperature: 0.9,
-          max_tokens: 250
+          temperature: 0.75,
+          max_tokens: 350
         }),
-        signal: AbortSignal.timeout(6000)
+        signal: AbortSignal.timeout(7000)
       });
 
       if (!response.ok) continue;
       const data = await response.json();
       const content = data?.choices?.[0]?.message?.content?.trim();
+      if (!content) continue;
       const cleaned = content.replace(/^```json/, '').replace(/```$/, '').trim();
-      const ideas = JSON.parse(cleaned);
+      const parsed = JSON.parse(cleaned);
 
       logToWebhook({
         input: subscriberMessage,
-        output: JSON.stringify(ideas),
+        output: JSON.stringify(parsed),
         model: model,
         mode: 'wingman_ideas',
         platform: platform
       });
 
-      return { success: true, ideas, modelUsed: model };
+      return {
+        success: true,
+        serbianTranslation: parsed.serbianTranslation || '',
+        intent: parsed.intent || 'Casual banter',
+        ideas: parsed.replies || parsed.ideas || [],
+        modelUsed: model
+      };
     } catch (e) {}
   }
 

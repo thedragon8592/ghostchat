@@ -47,6 +47,16 @@
     <main class="main-content">
       <!-- TAB 1: TRANSLATOR -->
       <section id="tabTranslate" class="tab-panel active">
+        <!-- Intuitive Context Memory Tracker -->
+        <div class="context-bar">
+          <div class="context-info">
+            <span class="context-icon">🧠</span>
+            <span class="context-label">Chat Memory:</span>
+            <span id="contextCount" class="context-badge">0 in thread</span>
+          </div>
+          <button id="btnResetContext" class="action-btn text-only small" title="Clear conversation memory for a new subscriber">↺ Reset Chat</button>
+        </div>
+
         <!-- Quick Tone Chips -->
         <div class="tone-bar">
           <button class="tone-chip active" data-tone="flirty">🔥 Flirty / OF</button>
@@ -58,7 +68,7 @@
         <!-- Input Box -->
         <div id="inputCard" class="input-card">
           <label for="inputText" class="field-label">Type your message in any language:</label>
-          <textarea id="inputText" placeholder="Type here in Serbian or any language (e.g. kako si lepa, sta radis)..." rows="3" autofocus></textarea>
+          <textarea id="inputText" placeholder="Type here in Serbian or any language (e.g. kako si lepa, hocu da te vidim)..." rows="3" autofocus></textarea>
           <div class="input-actions">
             <span class="hint-text">Press Enter to translate & auto-copy</span>
             <button id="btnTranslate" class="action-btn primary">
@@ -94,22 +104,31 @@
         </div>
       </section>
 
-      <!-- TAB 2: WINGMAN IDEAS -->
+      <!-- TAB 2: WINGMAN IDEAS & FAN TRANSLATION -->
       <section id="tabIdeas" class="tab-panel">
         <div id="fanInputCard" class="input-card">
-          <label for="fanMessageInput" class="field-label">Paste the fan/subscriber message here:</label>
-          <textarea id="fanMessageInput" placeholder="e.g. Hey what are you doing tonight? / Why haven't you replied yet?" rows="3"></textarea>
+          <label for="fanMessageInput" class="field-label">Paste the fan/subscriber message here (in English):</label>
+          <textarea id="fanMessageInput" placeholder="e.g. Hey babe wyd tonight? Were you thinking about me?" rows="3"></textarea>
           <div class="input-actions">
-            <span class="hint-text">AI generates 3 human replies for you</span>
+            <span class="hint-text">Translates to Serbian & generates 3 human replies</span>
             <button id="btnGenerateIdeas" class="action-btn primary">
               <span id="btnIdeasSpinner" class="hidden">⏳</span>
-              <span id="btnIdeasText">💡 Generate Ideas</span>
+              <span id="btnIdeasText">💡 Analyze & Get Ideas</span>
             </button>
           </div>
         </div>
 
+        <!-- Fan Message Meaning in Serbian Box -->
+        <div id="fanAnalysisCard" class="card fan-analysis-card hidden">
+          <div class="fan-analysis-header">
+            <span class="fan-intent-badge" id="fanIntentBadge">🎯 Intent: Flirty</span>
+            <span class="fan-lang-badge">🇷🇸 Serbian Meaning</span>
+          </div>
+          <div class="fan-translated-body" id="fanTranslatedText"></div>
+        </div>
+
         <div id="ideasContainer" class="ideas-list">
-          <div class="placeholder-msg">Paste the received message above to generate 3 ready-to-send human reply options.</div>
+          <div class="placeholder-msg">Paste the received English message above to see what it means in Serbian & get 3 human replies.</div>
         </div>
       </section>
 

@@ -1,4 +1,13 @@
-import { GHOST_CONFIG, translateChat, generateChatIdeas, processAdaptiveInterview, getActiveKey } from './core.js';
+import {
+  GHOST_CONFIG,
+  translateChat,
+  generateChatIdeas,
+  processAdaptiveInterview,
+  getActiveKey,
+  getConversationHistory,
+  clearConversationHistory,
+  addConversationTurn
+} from './core.js';
 
 // DOM Elements
 const tabBtns = document.querySelectorAll('.nav-tab');
@@ -20,6 +29,10 @@ const btnSendClarify = document.getElementById('btnSendClarify');
 const toneChips = document.querySelectorAll('.tone-chip:not(.wizard-chip):not(.append-chip)');
 const modelBadge = document.getElementById('modelBadge');
 
+// Context Tracker Elements
+const contextCount = document.getElementById('contextCount');
+const btnResetContext = document.getElementById('btnResetContext');
+
 // Status Notice Banner Elements
 const statusNotice = document.getElementById('statusNotice');
 const statusNoticeText = document.getElementById('statusNoticeText');
@@ -32,6 +45,9 @@ const btnGenerateIdeas = document.getElementById('btnGenerateIdeas');
 const btnIdeasSpinner = document.getElementById('btnIdeasSpinner');
 const btnIdeasText = document.getElementById('btnIdeasText');
 const ideasContainer = document.getElementById('ideasContainer');
+const fanAnalysisCard = document.getElementById('fanAnalysisCard');
+const fanIntentBadge = document.getElementById('fanIntentBadge');
+const fanTranslatedText = document.getElementById('fanTranslatedText');
 
 // Adaptive Interview Elements
 const qRole = document.getElementById('qRole');
@@ -133,8 +149,11 @@ function initApp() {
 
   // Setup Service Worker for PWA
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=5').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=6').catch(() => {});
   }
+
+  // Update conversation memory display
+  updateContextDisplay();
 
   // Check first-time interview prompt
   checkInterviewPrompt();
@@ -266,6 +285,13 @@ function bindEvents() {
     outputCard.classList.remove('success-glow', 'error-glow');
     inputCard.classList.remove('sending');
     inputText.focus();
+  });
+
+  // Reset Conversation Context
+  btnResetContext?.addEventListener('click', () => {
+    clearConversationHistory();
+    updateContextDisplay();
+    showToast('↺ Chat memory reset for new conversation', 'info', 2500);
   });
 
   // Clarify reply
@@ -409,6 +435,7 @@ async function handleTranslate() {
   showCopyBadge('✓ Auto-copied');
   setStatus('success', '✓ Message sent & translated! Automatically copied to your clipboard.');
   showToast('✓ Message sent & copied to clipboard!', 'success', 3000);
+  updateContextDisplay();
 
   if (typeof navigator !== 'undefined' && navigator.vibrate) {
     try { navigator.vibrate([40]); } catch (e) {}
@@ -426,8 +453,8 @@ async function handleGenerateIdeas() {
   btnGenerateIdeas.disabled = true;
   btnIdeasSpinner.classList.remove('hidden');
   btnIdeasText.textContent = 'Generating...';
-  ideasContainer.innerHTML = '<div class="placeholder-msg">Generating 3 human options...</div>';
-  showToast('Generating 3 replies...', 'info', 2000);
+  ideasContainer.innerHTML = '<div class="placeholder-msg">Analyzing fan message & generating 3 human options...</div>';
+  showToast('Analyzing fan message...', 'info', 2000);
 
   const res = await generateChatIdeas({
     subscriberMessage: msg,
@@ -439,12 +466,22 @@ async function handleGenerateIdeas() {
   fanInputCard?.classList.remove('sending');
   btnGenerateIdeas.disabled = false;
   btnIdeasSpinner.classList.add('hidden');
-  btnIdeasText.textContent = '💡 Generate Ideas';
+  btnIdeasText.textContent = '💡 Analyze & Get Ideas';
 
   if (!res.success || !res.ideas) {
+    fanAnalysisCard?.classList.add('hidden');
     ideasContainer.innerHTML = `<div class="placeholder-msg" style="color:#ef4444">${res.error || 'Failed to generate ideas'}</div>`;
     showToast(`❌ Failed to generate ideas: ${res.error}`, 'error', 3500);
     return;
+  }
+
+  // Display Serbian meaning & Intent
+  if (res.serbianTranslation) {
+    fanAnalysisCard?.classList.remove('hidden');
+    if (fanIntentBadge) fanIntentBadge.textContent = `🎯 Intent: ${res.intent || 'Casual banter'}`;
+    if (fanTranslatedText) fanTranslatedText.textContent = res.serbianTranslation;
+  } else {
+    fanAnalysisCard?.classList.add('hidden');
   }
 
   ideasContainer.innerHTML = '';
@@ -462,15 +499,25 @@ async function handleGenerateIdeas() {
     const copyBtn = card.querySelector('button');
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(idea.text);
+      addConversationTurn({ role: 'fan', text: msg });
+      addConversationTurn({ role: 'me', text: idea.text });
+      updateContextDisplay();
       copyBtn.textContent = '✓ Copied';
-      showToast('✓ Idea copied to clipboard!', 'success', 2000);
+      showToast('✓ Idea copied & added to chat memory!', 'success', 2000);
       setTimeout(() => copyBtn.textContent = '📋 Copy & Send', 1500);
     });
 
     ideasContainer.appendChild(card);
   });
 
-  showToast('✓ 3 Ideas generated successfully!', 'success', 2500);
+  showToast('✓ Translated to Serbian & 3 ideas ready!', 'success', 2500);
+}
+
+function updateContextDisplay() {
+  const history = getConversationHistory();
+  if (contextCount) {
+    contextCount.textContent = `${history.length} in thread`;
+  }
 }
 
 async function handleAdaptiveInterview() {
