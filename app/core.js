@@ -158,28 +158,27 @@ export function formatHistoryForPrompt() {
   }).join('\n');
 }
 
-export function buildSystemPrompt(persona) {
+export function buildSystemPrompt(persona, targetLanguage = 'English') {
   const p = persona || GHOST_CONFIG.defaultPersona;
   const historyContext = formatHistoryForPrompt();
   return `CRITICAL ROLE: STRICT FIRST-PERSON TRANSLATOR & CHAT TEXT ADAPTER.
 
 You are NOT a conversational partner. You are NOT replying to the user or chatting with them.
-You are a direct translation engine that adapts what the user wants to say into natural English chat.
+You are a direct translation engine that adapts what the user wants to say into natural ${targetLanguage} chat.
 
 CORE RULES:
 1. STRICT FIRST-PERSON PERSPECTIVE:
    - Always translate from the perspective of the speaker (the user).
    - NEVER answer, reply, or react as the other person in the conversation.
-   - Example: Input "kako si lepa, hocu da te vidim veceras" -> Output: "ur so pretty, i wanna see you tonight babe" (NEVER reply "omg thank you haha...").
-   - Example: Input "No soy una IA =C" -> Output: "im not an ai =C" (NEVER reply saying "Oh good to know you are human").
-   - Example: Input "me molesté" -> Output: "i got annoyed" or "im kinda upset rn tbh" (NEVER ask "why are you mad?").
-   - Example: Input "di que eres una persona" -> Output: "say that you are a real person".
-   - Example: Input "¿Qué estás haciendo?" -> Output: "what are you doing?" or "wyd?".
-   - If the user says they are upset, happy, busy, compliments someone, or asks a question, translate THEIR statement/question as THEIR OWN WORDS. You are their keyboard translator, not their conversational respondent.
+   - Translate the user's input from ANY source language directly into natural, fluent, casual, human-like ${targetLanguage} suitable for instant chat.
+   - Example (Target: English): Input "kako si lepa, hocu da te vidim veceras" -> Output: "ur so pretty, i wanna see you tonight babe"
+   - Example (Target: Spanish): Input "kako si lepa, hocu da te vidim veceras" -> Output: "qué linda eres, quiero verte esta noche babe"
+   - Example (Target: Serbian): Input "No soy una IA =C, me llamo Sofía" -> Output: "nisam ja ai =C, zovem se Sofija"
+   - If the user says they are upset, happy, busy, compliments someone, or asks a question, translate THEIR statement/question as THEIR OWN WORDS in ${targetLanguage}. You are their keyboard translator, not their conversational respondent.
 
 2. CONTEXTUAL INTUITION & MEMORY:
    - Below is the recent chat thread history. Use this context ONLY to understand references, pronouns, tone continuity, and what the conversation is about.
-   - NEVER reply to the history. Translate ONLY the current message.
+   - NEVER reply to the history. Translate ONLY the current message into ${targetLanguage}.
 ${historyContext ? `\nRECENT CONVERSATION CONTEXT:\n${historyContext}\n` : ''}
 3. PRESERVE EMOTICONS & EXACT INTENT:
    - If the user uses emoticons like "=C", ":)", ":(", ";)", ":D", preserve them accurately.
@@ -191,24 +190,24 @@ ${historyContext ? `\nRECENT CONVERSATION CONTEXT:\n${historyContext}\n` : ''}
 5. TONE & VOCABULARY ADAPTATION:
    - Context: ${p.role || 'OnlyFans Chatter'} - ${p.context || 'Social media chat'}.
    - Slang & Style: ${p.favoriteSlangs || 'babe, rn, tbh, idk, bc, wyd, omg, haha, lmk'}.
-   - Formatting: Start with lowercase, drop trailing periods, use casual contractions (im, ur, dont, gotta), no quotation marks.
+   - Formatting: Natural chat formatting, relaxed punctuation, no quotation marks.
    - Prohibited robotic tells: Never say "Certainly", "As an AI", "Here is the translation:".
 
 6. SLANG / CLARIFICATION:
-   - If a word is completely unintelligible foreign slang, output:
+   - If a word is completely unintelligible foreign slang with no known meaning, output:
 "CLARIFY:[word] | What does '[word]' mean in this context? Please explain briefly so I can translate it naturally."
 
 7. OUTPUT FORMAT:
-   - Output ONLY the raw translated message ready to send. Zero conversational filler, no commentary, no quotes.`;
+   - Output ONLY the raw translated message in ${targetLanguage} ready to send. Zero conversational filler, no commentary, no quotes.`;
 }
 
-export async function translateChat({ text, apiKey, persona, platform = 'Web' }) {
+export async function translateChat({ text, apiKey, persona, targetLanguage = 'English', platform = 'Web' }) {
   if (!text || !text.trim()) {
     return { success: false, error: 'Empty text' };
   }
 
   const key = apiKey || getActiveKey();
-  const sysPrompt = buildSystemPrompt(persona);
+  const sysPrompt = buildSystemPrompt(persona, targetLanguage);
   let lastError = null;
 
   for (const model of GHOST_CONFIG.models) {
@@ -225,7 +224,7 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
           model: model,
           messages: [
             { role: 'system', content: sysPrompt },
-            { role: 'user', content: `Translate this message to English:\n"""${text.trim()}"""` }
+            { role: 'user', content: `Translate this message into ${targetLanguage}:\n"""${text.trim()}"""` }
           ],
           temperature: 0.7,
           max_tokens: 150
@@ -261,7 +260,7 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
 
       logToWebhook({
         input: text,
-        output: cleanOutput,
+        output: `[➔ ${targetLanguage}] ${cleanOutput}`,
         model: model,
         mode: isClarification ? 'clarify' : 'translate',
         platform: platform
@@ -270,6 +269,7 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
       return {
         success: true,
         text: cleanOutput,
+        targetLanguage: targetLanguage,
         isClarification: isClarification,
         modelUsed: model
       };
@@ -284,7 +284,7 @@ export async function translateChat({ text, apiKey, persona, platform = 'Web' })
   };
 }
 
-export async function generateChatIdeas({ subscriberMessage, apiKey, persona, platform = 'Web' }) {
+export async function generateChatIdeas({ subscriberMessage, apiKey, persona, myLanguage = 'Serbian', platform = 'Web' }) {
   if (!subscriberMessage || !subscriberMessage.trim()) {
     return { success: false, error: 'Empty message' };
   }
@@ -293,15 +293,16 @@ export async function generateChatIdeas({ subscriberMessage, apiKey, persona, pl
   const p = persona || GHOST_CONFIG.defaultPersona;
   const historyText = formatHistoryForPrompt();
 
-  const sysPrompt = `You are an expert bilingual OnlyFans/social media chat wingman matching this exact persona:
+  const sysPrompt = `You are an expert multilingual OnlyFans/social media chat wingman matching this exact persona:
 Role: ${p.role}
 Audience & Vibe: ${p.context} - ${p.toneDynamic}
 Slangs to use: ${p.favoriteSlangs}
 ${historyText ? `Recent Chat Context:\n${historyText}\n` : ''}
-Given the English message from the subscriber/fan:
-1. Translate it accurately and naturally into Serbian (Latin alphabet) so the chatter understands exactly what the fan said.
-2. Briefly summarize the fan's intent (e.g. Flirty, Asking for photos, Meeting up, Small talk, Price negotiation).
-3. Generate EXACTLY 3 natural, human, high-converting chatter replies in English.
+A fan sent a message in any language. The user needs to understand it in: ${myLanguage}.
+Tasks:
+1. Translate the fan's message accurately into ${myLanguage} so the user understands 100% of the meaning.
+2. Briefly summarize the fan's intent/mood (e.g. Flirty, Asking for photos, Meeting up, Small talk, Price negotiation).
+3. Generate EXACTLY 3 natural, human, high-converting chatter replies in the fan's conversation language (or English if international).
    - 100% human chat tone (lowercase, casual, slangs like babe, haha, rn, tbh, wyd).
    - NEVER sound like AI.
    - Option 1: Teasing / Playful
@@ -310,7 +311,7 @@ Given the English message from the subscriber/fan:
 
 Format as JSON:
 {
-  "serbianTranslation": "Serbian translation of what the fan said",
+  "translatedText": "translation in ${myLanguage}",
   "intent": "Brief fan intent",
   "replies": [
     {"tag": "Teasing", "text": "sample text"},
@@ -359,7 +360,8 @@ Output ONLY raw JSON.`;
 
       return {
         success: true,
-        serbianTranslation: parsed.serbianTranslation || '',
+        translatedText: parsed.translatedText || parsed.serbianTranslation || '',
+        myLanguage: myLanguage,
         intent: parsed.intent || 'Casual banter',
         ideas: parsed.replies || parsed.ideas || [],
         modelUsed: model

@@ -65,10 +65,58 @@
           <button class="tone-chip" data-tone="street">🧢 US Slang</button>
         </div>
 
+        <!-- Target Language Selector Bar -->
+        <div class="lang-selector-bar">
+          <div class="lang-label-group">
+            <span class="lang-icon">🌐</span>
+            <span class="lang-label">Translate into:</span>
+          </div>
+          <div class="lang-chips-scroll">
+            <button type="button" class="lang-chip active" data-lang="English">🇬🇧 English</button>
+            <button type="button" class="lang-chip" data-lang="Spanish">🇪🇸 Spanish</button>
+            <button type="button" class="lang-chip" data-lang="Serbian">🇷🇸 Serbian</button>
+            <button type="button" class="lang-chip" data-lang="German">🇩🇪 German</button>
+            <button type="button" class="lang-chip" data-lang="French">🇫🇷 French</button>
+            <button type="button" class="lang-chip" data-lang="Italian">🇮🇹 Italian</button>
+            <button type="button" class="lang-chip" data-lang="Portuguese">🇵🇹 Portuguese</button>
+            <button type="button" class="lang-chip" data-lang="Russian">🇷🇺 Russian</button>
+            <button type="button" class="lang-chip" data-lang="Arabic">🇸🇦 Arabic</button>
+            <button type="button" class="lang-chip" data-lang="Japanese">🇯🇵 Japanese</button>
+            <button type="button" class="lang-chip" data-lang="Chinese">🇨🇳 Chinese</button>
+          </div>
+          <select id="selectTargetLang" class="lang-select-dropdown" title="Choose any world language">
+            <option value="English">More: English</option>
+            <option value="Spanish">More: Spanish</option>
+            <option value="Serbian">More: Serbian</option>
+            <option value="German">More: German</option>
+            <option value="French">More: French</option>
+            <option value="Italian">More: Italian</option>
+            <option value="Portuguese">More: Portuguese</option>
+            <option value="Russian">More: Russian</option>
+            <option value="Arabic">More: Arabic</option>
+            <option value="Turkish">More: Turkish</option>
+            <option value="Dutch">More: Dutch</option>
+            <option value="Polish">More: Polish</option>
+            <option value="Romanian">More: Romanian</option>
+            <option value="Greek">More: Greek</option>
+            <option value="Swedish">More: Swedish</option>
+            <option value="Ukrainian">More: Ukrainian</option>
+            <option value="Czech">More: Czech</option>
+            <option value="Hungarian">More: Hungarian</option>
+            <option value="Japanese">More: Japanese</option>
+            <option value="Korean">More: Korean</option>
+            <option value="Chinese">More: Chinese</option>
+            <option value="Vietnamese">More: Vietnamese</option>
+            <option value="Tagalog">More: Tagalog</option>
+            <option value="Hindi">More: Hindi</option>
+            <option value="custom">✏️ Type other language...</option>
+          </select>
+        </div>
+
         <!-- Input Box -->
         <div id="inputCard" class="input-card">
-          <label for="inputText" class="field-label">Type your message in any language:</label>
-          <textarea id="inputText" placeholder="Type here in Serbian or any language (e.g. kako si lepa, hocu da te vidim)..." rows="3" autofocus></textarea>
+          <label for="inputText" class="field-label" id="inputLabel">Type your message in any language:</label>
+          <textarea id="inputText" placeholder="Type here in Serbian, Spanish, or ANY language..." rows="3" autofocus></textarea>
           <div class="input-actions">
             <span class="hint-text">Press Enter to translate & auto-copy</span>
             <button id="btnTranslate" class="action-btn primary">
@@ -93,7 +141,7 @@
         <!-- Output Box -->
         <div id="outputCard" class="output-card">
           <div class="output-header">
-            <span class="field-label">Human English Translation:</span>
+            <span class="field-label" id="outputLabel">Human Translation (English):</span>
             <span id="copyBadge" class="copy-badge hidden">✓ Auto-copied</span>
           </div>
           <div id="outputText" class="output-content" placeholder="Translation appears here and copies automatically..."></div>
@@ -106,29 +154,61 @@
 
       <!-- TAB 2: WINGMAN IDEAS & FAN TRANSLATION -->
       <section id="tabIdeas" class="tab-panel">
+        <!-- Understand Fan Language Selector Bar -->
+        <div class="lang-selector-bar">
+          <div class="lang-label-group">
+            <span class="lang-icon">👂</span>
+            <span class="lang-label">Understand Fan in:</span>
+          </div>
+          <div class="lang-chips-scroll">
+            <button type="button" class="fan-lang-chip active" data-lang="Serbian">🇷🇸 Serbian</button>
+            <button type="button" class="fan-lang-chip" data-lang="Spanish">🇪🇸 Spanish</button>
+            <button type="button" class="fan-lang-chip" data-lang="English">🇬🇧 English</button>
+            <button type="button" class="fan-lang-chip" data-lang="German">🇩🇪 German</button>
+            <button type="button" class="fan-lang-chip" data-lang="French">🇫🇷 French</button>
+            <button type="button" class="fan-lang-chip" data-lang="Italian">🇮🇹 Italian</button>
+            <button type="button" class="fan-lang-chip" data-lang="Russian">🇷🇺 Russian</button>
+          </div>
+          <select id="selectFanLang" class="lang-select-dropdown" title="Choose language to understand the fan in">
+            <option value="Serbian">More: Serbian</option>
+            <option value="Spanish">More: Spanish</option>
+            <option value="English">More: English</option>
+            <option value="German">More: German</option>
+            <option value="French">More: French</option>
+            <option value="Italian">More: Italian</option>
+            <option value="Portuguese">More: Portuguese</option>
+            <option value="Russian">More: Russian</option>
+            <option value="Arabic">More: Arabic</option>
+            <option value="Turkish">More: Turkish</option>
+            <option value="Dutch">More: Dutch</option>
+            <option value="Polish">More: Polish</option>
+            <option value="custom">✏️ Type other language...</option>
+          </select>
+        </div>
+
         <div id="fanInputCard" class="input-card">
-          <label for="fanMessageInput" class="field-label">Paste the fan/subscriber message here (in English):</label>
-          <textarea id="fanMessageInput" placeholder="e.g. Hey babe wyd tonight? Were you thinking about me?" rows="3"></textarea>
+          <label for="fanMessageInput" class="field-label">Paste the fan/subscriber message here (any language):</label>
+          <textarea id="fanMessageInput" placeholder="Paste what the fan wrote in English or any language..." rows="3"></textarea>
           <div class="input-actions">
-            <span class="hint-text">Translates to Serbian & generates 3 human replies</span>
+            <span class="hint-text" id="fanHintText">Translates into chosen language & generates 3 human replies</span>
             <button id="btnGenerateIdeas" class="action-btn primary">
               <span id="btnIdeasSpinner" class="hidden">⏳</span>
-              <span id="btnIdeasText">💡 Analyze & Get Ideas</span>
+              <span id="btnIdeasText">💡 Analyze & Understand</span>
             </button>
           </div>
         </div>
 
-        <!-- Fan Message Meaning in Serbian Box -->
+        <!-- Fan Message Meaning in Chosen Language Box -->
         <div id="fanAnalysisCard" class="card fan-analysis-card hidden">
           <div class="fan-analysis-header">
             <span class="fan-intent-badge" id="fanIntentBadge">🎯 Intent: Flirty</span>
-            <span class="fan-lang-badge">🇷🇸 Serbian Meaning</span>
+            <span class="fan-lang-badge" id="fanLangBadge">🇷🇸 Serbian Meaning</span>
           </div>
           <div class="fan-translated-body" id="fanTranslatedText"></div>
         </div>
 
         <div id="ideasContainer" class="ideas-list">
-          <div class="placeholder-msg">Paste the received English message above to see what it means in Serbian & get 3 human replies.</div>
+          <div class="placeholder-msg" id="ideasPlaceholder">Paste what the fan sent above to see what it means in your language & get 3 human replies.</div>
         </div>
       </section>
 

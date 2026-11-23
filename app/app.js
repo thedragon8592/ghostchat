@@ -33,6 +33,12 @@ const modelBadge = document.getElementById('modelBadge');
 const contextCount = document.getElementById('contextCount');
 const btnResetContext = document.getElementById('btnResetContext');
 
+// Language Selector Elements
+const outputLabel = document.getElementById('outputLabel');
+const selectTargetLang = document.getElementById('selectTargetLang');
+const selectFanLang = document.getElementById('selectFanLang');
+const fanLangBadge = document.getElementById('fanLangBadge');
+
 // Status Notice Banner Elements
 const statusNotice = document.getElementById('statusNotice');
 const statusNoticeText = document.getElementById('statusNoticeText');
@@ -81,6 +87,8 @@ const toastContainer = document.getElementById('toastContainer');
 // State
 let currentPersona = null;
 let currentTone = 'flirty';
+let currentTargetLang = localStorage.getItem('ghost_target_lang') || 'English';
+let currentMyLang = localStorage.getItem('ghost_my_lang') || 'Serbian';
 let lastFailedText = '';
 
 // Toast Notification Helper
@@ -149,11 +157,25 @@ function initApp() {
 
   // Setup Service Worker for PWA
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=6').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=7').catch(() => {});
   }
 
   // Update conversation memory display
   updateContextDisplay();
+
+  // Initialize Language Selection UI
+  if (outputLabel) outputLabel.textContent = `Human Translation (${currentTargetLang}):`;
+  if (fanLangBadge) fanLangBadge.textContent = `Meaning in ${currentMyLang}`;
+
+  document.querySelectorAll('.lang-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.lang === currentTargetLang);
+  });
+  if (selectTargetLang) selectTargetLang.value = currentTargetLang;
+
+  document.querySelectorAll('.fan-lang-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.lang === currentMyLang);
+  });
+  if (selectFanLang) selectFanLang.value = currentMyLang;
 
   // Check first-time interview prompt
   checkInterviewPrompt();
@@ -218,6 +240,74 @@ function bindEvents() {
       currentTone = chip.dataset.tone;
       showToast(`Tone changed to: ${chip.textContent}`, 'info', 1500);
     });
+  });
+
+  // Target Language Chips
+  document.querySelectorAll('.lang-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentTargetLang = chip.dataset.lang;
+      localStorage.setItem('ghost_target_lang', currentTargetLang);
+      if (selectTargetLang) selectTargetLang.value = currentTargetLang;
+      if (outputLabel) outputLabel.textContent = `Human Translation (${currentTargetLang}):`;
+      showToast(`Target Language: ${currentTargetLang}`, 'info', 1500);
+    });
+  });
+
+  // Target Language Dropdown
+  selectTargetLang?.addEventListener('change', (e) => {
+    let val = e.target.value;
+    if (val === 'custom') {
+      const customLang = prompt('Type the exact language you want to translate into (e.g. Romanian, Polish, Japanese, Swedish):', 'English');
+      if (customLang && customLang.trim()) {
+        val = customLang.trim();
+      } else {
+        selectTargetLang.value = currentTargetLang;
+        return;
+      }
+    }
+    document.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('active'));
+    const matchingChip = document.querySelector(`.lang-chip[data-lang="${val}"]`);
+    if (matchingChip) matchingChip.classList.add('active');
+    currentTargetLang = val;
+    localStorage.setItem('ghost_target_lang', currentTargetLang);
+    if (outputLabel) outputLabel.textContent = `Human Translation (${currentTargetLang}):`;
+    showToast(`Target Language: ${currentTargetLang}`, 'info', 1500);
+  });
+
+  // Fan Understanding Language Chips
+  document.querySelectorAll('.fan-lang-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.fan-lang-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentMyLang = chip.dataset.lang;
+      localStorage.setItem('ghost_my_lang', currentMyLang);
+      if (selectFanLang) selectFanLang.value = currentMyLang;
+      if (fanLangBadge) fanLangBadge.textContent = `Meaning in ${currentMyLang}`;
+      showToast(`Understand Fan in: ${currentMyLang}`, 'info', 1500);
+    });
+  });
+
+  // Fan Understanding Language Dropdown
+  selectFanLang?.addEventListener('change', (e) => {
+    let val = e.target.value;
+    if (val === 'custom') {
+      const customLang = prompt('Type the language you want fan messages translated into (e.g. Serbian, Spanish, Russian):', 'Serbian');
+      if (customLang && customLang.trim()) {
+        val = customLang.trim();
+      } else {
+        selectFanLang.value = currentMyLang;
+        return;
+      }
+    }
+    document.querySelectorAll('.fan-lang-chip').forEach(c => c.classList.remove('active'));
+    const matchingChip = document.querySelector(`.fan-lang-chip[data-lang="${val}"]`);
+    if (matchingChip) matchingChip.classList.add('active');
+    currentMyLang = val;
+    localStorage.setItem('ghost_my_lang', currentMyLang);
+    if (fanLangBadge) fanLangBadge.textContent = `Meaning in ${currentMyLang}`;
+    showToast(`Understand Fan in: ${currentMyLang}`, 'info', 1500);
   });
 
   // Wizard Chip Selection (Replace Value)
@@ -399,6 +489,7 @@ async function handleTranslate() {
     text,
     apiKey: apiKeyInput.value.trim() || getActiveKey(),
     persona: activePersona,
+    targetLanguage: currentTargetLang,
     platform: 'Web App'
   });
 
@@ -460,6 +551,7 @@ async function handleGenerateIdeas() {
     subscriberMessage: msg,
     apiKey: apiKeyInput.value.trim() || getActiveKey(),
     persona: currentPersona,
+    myLanguage: currentMyLang,
     platform: 'Web App'
   });
 
@@ -475,11 +567,12 @@ async function handleGenerateIdeas() {
     return;
   }
 
-  // Display Serbian meaning & Intent
-  if (res.serbianTranslation) {
+  // Display translation in chosen language & Intent
+  if (res.translatedText) {
     fanAnalysisCard?.classList.remove('hidden');
     if (fanIntentBadge) fanIntentBadge.textContent = `🎯 Intent: ${res.intent || 'Casual banter'}`;
-    if (fanTranslatedText) fanTranslatedText.textContent = res.serbianTranslation;
+    if (fanLangBadge) fanLangBadge.textContent = `Meaning in ${res.myLanguage || currentMyLang}`;
+    if (fanTranslatedText) fanTranslatedText.textContent = res.translatedText;
   } else {
     fanAnalysisCard?.classList.add('hidden');
   }
